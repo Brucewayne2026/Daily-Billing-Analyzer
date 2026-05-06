@@ -1,0 +1,2787 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Billing & Posting Analysis Tool</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon.png">
+  <link rel="shortcut icon" href="/img/favicon.png">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <script src="/chart.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,600;1,300&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@300;400;500&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- ━━━━━━━ MOBILE TOGGLE ━━━━━━━ -->
+  <button class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()" aria-label="Open menu" style="display:none; position:fixed; top:16px; left:16px; z-index:10001; background:var(--surface); border:1px solid var(--glass-border); padding:8px; border-radius:var(--r-xs); cursor:pointer; box-shadow:var(--shadow-sm);">
+    <i data-lucide="menu"></i>
+  </button>
+
+
+  <!-- ━━━━━━━ LOADING OVERLAY ━━━━━━━ -->
+  <div id="loading-overlay">
+    <div class="loading-spinner-wrap">
+      <div class="loading-spinner"></div>
+    </div>
+    <div class="loading-text">Initializing Analysis Tool</div>
+  </div>
+
+  <!-- ━━━━━━━ SIDEBAR ━━━━━━━ -->
+  <div id="sidebar">
+    <div class="sidebar-logo">
+      <img src="img/logo.png" class="logo-img" alt="Logo">
+      <div class="logo-text-wrap">
+        <span class="logo-text">Data Analyzer</span>
+        <span class="logo-sub">Billing & Posting Analysis</span>
+      </div>
+    </div>
+
+    <div class="sidebar-nav">
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Reports</div>
+        <div class="nav-item active" id="nav-billing" onclick="switchSection('billing')">
+          <span class="nav-icon"><i data-lucide="line-chart"></i></span> Billing Summary
+        </div>
+        <div class="nav-item" id="nav-posting" onclick="switchSection('posting')">
+          <span class="nav-icon"><i data-lucide="wallet"></i></span> Payment Posting
+        </div>
+        <div class="nav-item" id="nav-rejections" onclick="switchSection('rejections')">
+          <span class="nav-icon"><i data-lucide="file-warning"></i></span> Rejection Summary
+        </div>
+        <div class="nav-item" id="nav-denials" onclick="switchSection('denials')">
+          <span class="nav-icon"><i data-lucide="file-x"></i></span> Daily Denial Summary
+        </div>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Navigation</div>
+        <div class="nav-item" id="nav-upload" onclick="requestPasteAccess()">
+          <span class="nav-icon"><i data-lucide="clipboard-paste"></i></span> Paste Data
+        </div>
+        <div class="nav-item" id="nav-chgpwd" onclick="openChangePwd()">
+          <span class="nav-icon"><i data-lucide="lock"></i></span> Change Password
+        </div>
+      </div>
+    </div> <!-- End sidebar-nav -->
+
+    <div class="sidebar-divider"></div>
+
+    <div id="file-box" class="file-info-box" style="display:none">
+      <div class="file-info-label"><i data-lucide="database" style="width:12px;height:12px;margin-right:5px"></i> Data
+        Loaded</div>
+      <div class="file-info-name" id="sb-filename">—</div>
+      <div class="file-info-rows" id="sb-rows">—</div>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━ MAIN ━━━━━━━ -->
+  <div id="main">
+
+    <!-- PASTE VIEW -->
+    <div id="upload-view">
+      <div class="upload-hero">
+        <h2><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            class="lucide lucide-book-open-check-icon lucide-book-open-check">
+            <path d="M12 21V7" />
+            <path d="m16 12 2 2 4-4" />
+            <path
+              d="M22 6V4a1 1 0 0 0-1-1h-5a4 4 0 0 0-4 4 4 4 0 0 0-4-4H3a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h6a3 3 0 0 1 3 3 3 3 0 0 1 3-3h6a1 1 0 0 0 1-1v-1.3" />
+          </svg> Paste Your Sheet Data</h2>
+        <p>Select all cells in each sheet tab (Ctrl+A then Ctrl+C), then paste below. The dashboard will automatically
+          parse and visualize your data.</p>
+      </div>
+
+      <div class="paste-tabs-wrap">
+        <div class="paste-tabs-header">
+          <div class="paste-tab active" id="tab-billing" onclick="switchTab('billing')">
+            <span class="tab-dot" style="background:var(--blue)"></span> Daily Billing
+            <span class="tab-check" id="check-billing">✔</span>
+          </div>
+          <div class="paste-tab" id="tab-posting" onclick="switchTab('posting')">
+            <span class="tab-dot" style="background:var(--green)"></span> Daily Posting
+            <span class="tab-check" id="check-posting">✔</span>
+          </div>
+          <div class="paste-tab" id="tab-rejections" onclick="switchTab('rejections')">
+            <span class="tab-dot" style="background:var(--red)"></span> Rejections
+            <span class="tab-check" id="check-rejections">✔</span>
+          </div>
+          <div class="paste-tab" id="tab-denials" onclick="switchTab('denials')">
+            <span class="tab-dot" style="background:var(--orange)"></span> Daily Denials
+            <span class="tab-check" id="check-denials">✔</span>
+          </div>
+          <div class="paste-tab" id="tab-pending-reasons" onclick="switchTab('pending-reasons')">
+            <span class="tab-dot" style="background:var(--yellow)"></span> Pending Reasons
+          </div>
+        </div>
+
+        <div class="paste-panels">
+
+          <!-- Billing Panel -->
+          <div class="paste-panel active" id="panel-billing">
+            <div class="paste-panel-header">
+              <div class="paste-panel-info">
+                <h4><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    class="lucide lucide-clipboard-check-icon lucide-clipboard-check">
+                    <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                    <path d="m9 14 2 2 4-4" />
+                  </svg> Daily Billing Sheet</h4>
+                <p>Go to your <b>Daily Billing</b> sheet → Select All (Ctrl+A) → Copy (Ctrl+C) → Paste below</p>
+              </div>
+            </div>
+            <textarea class="paste-area" id="paste-billing"
+              placeholder="Paste your Daily Billing sheet data here...&#10;&#10;Expected: Row 0 = headers, Row 1 = provider names, Row 2+ = daily data&#10;Columns per provider: Date | Prev Pending | Received | Completed | Pending"
+              oninput="onPasteInput('billing')"></textarea>
+            <div class="paste-actions">
+              <span class="paste-status" id="status-billing">Waiting for data…</span>
+              <button class="paste-clear" onclick="clearPaste('billing')">✕ Clear</button>
+            </div>
+          </div>
+
+          <!-- Posting Panel -->
+          <div class="paste-panel" id="panel-posting">
+            <div class="paste-panel-header">
+              <div class="paste-panel-info">
+                <h4><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    class="lucide lucide-wallet-cards-icon lucide-wallet-cards">
+                    <rect width="18" height="18" x="3" y="3" rx="2" />
+                    <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2" />
+                    <path d="M3 11h3c.8 0 1.6.3 2.1.9l1.1.9c1.6 1.6 4.1 1.6 5.7 0l1.1-.9c.5-.5 1.3-.9 2.1-.9H21" />
+                  </svg> Daily Posting Sheet</h4>
+                <p>Go to your <b>Daily Posting</b> sheet → Select All (Ctrl+A) → Copy (Ctrl+C) → Paste below</p>
+              </div>
+            </div>
+            <textarea class="paste-area" id="paste-posting"
+              placeholder="Paste your Daily Posting sheet data here...&#10;&#10;Expected: Row 0 = provider names (col 3,9,15…), ERA/EOB type per row&#10;Columns per provider: Prev Pending | Received | Completed | Pending | Amt Received | Posted Amt"
+              oninput="onPasteInput('posting')"></textarea>
+            <div class="paste-actions">
+              <span class="paste-status" id="status-posting">Waiting for data…</span>
+              <button class="paste-clear" onclick="clearPaste('posting')">✕ Clear</button>
+            </div>
+          </div>
+
+          <!-- Rejections Panel -->
+          <div class="paste-panel" id="panel-rejections">
+            <div class="paste-panel-header">
+              <div class="paste-panel-info">
+                <h4><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    class="lucide lucide-banknote-x-icon lucide-banknote-x">
+                    <path d="M13 18H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5" />
+                    <path d="m17 17 5 5" />
+                    <path d="M18 12h.01" />
+                    <path d="m22 17-5 5" />
+                    <path d="M6 12h.01" />
+                    <circle cx="12" cy="12" r="2" />
+                  </svg> Rejections Sheet</h4>
+                <p>Go to your <b>Rejections</b> sheet → Select All (Ctrl+A) → Copy (Ctrl+C) → Paste below</p>
+              </div>
+            </div>
+            <textarea class="paste-area" id="paste-rejections"
+              placeholder="Paste your Rejections sheet data here...&#10;&#10;Expected: Row 0 = provider names (every 3 cols), Row 1 = sub-labels&#10;Columns per provider: Received | Completed | Pending"
+              oninput="onPasteInput('rejections')"></textarea>
+            <div class="paste-actions">
+              <span class="paste-status" id="status-rejections">Waiting for data…</span>
+              <button class="paste-clear" onclick="clearPaste('rejections')">✕ Clear</button>
+            </div>
+          </div>
+
+          <!-- Denials Panel -->
+          <div class="paste-panel" id="panel-denials">
+            <div class="paste-panel-header">
+              <div class="paste-panel-info">
+                <h4><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    class="lucide lucide-copy-x-icon lucide-copy-x">
+                    <line x1="12" x2="18" y1="12" y2="18" />
+                    <line x1="12" x2="18" y1="18" y2="12" />
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                  </svg> Daily Denials Sheet</h4>
+                <p>Go to your <b>Daily Denials</b> sheet → Select All (Ctrl+A) → Copy (Ctrl+C) → Paste below</p>
+              </div>
+            </div>
+            <textarea class="paste-area" id="paste-denials"
+              placeholder="Paste your Daily Denials sheet data here...&#10;&#10;Expected: Row 0 = Date + provider names&#10;Rows 1+ = date | count per provider"
+              oninput="onPasteInput('denials')"></textarea>
+            <div class="paste-actions">
+              <span class="paste-status" id="status-denials">Waiting for data…</span>
+              <button class="paste-clear" onclick="clearPaste('denials')">✕ Clear</button>
+            </div>
+          </div>
+
+          <!-- Pending Reasons Panel -->
+          <div class="paste-panel" id="panel-pending-reasons">
+            <div class="paste-panel-header">
+              <div class="paste-panel-info">
+                <h4>⚠️ Pending Claim Reasons</h4>
+                <p>Add or edit the pending claim reason for each provider. One entry per line: <b>Provider Name: Reason
+                    text</b>. These will appear in the Billing Summary tab.</p>
+              </div>
+            </div>
+            <div id="pending-reasons-editor">
+              <textarea class="paste-area" id="paste-pending-reasons" style="height:220px"
+                placeholder="e.g.&#10;Dr. Smith: Provider Sign Off Missing&#10;Dr. Jones: ECW errors&#10;Dr. Lee: No Auth pending&#10;&#10;Format: Provider Name: Reason"
+                oninput="onPendingReasonsInput()"></textarea>
+              <div class="paste-actions">
+                <span class="paste-status" id="status-pending-reasons">Enter reasons above and click Save</span>
+                <button class="paste-clear" onclick="clearPendingReasonsEditor()">✕ Clear</button>
+              </div>
+              <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end;">
+                <button class="btn-primary" onclick="savePendingReasonsFromEditor()">💾 Save Reasons</button>
+              </div>
+            </div>
+            <div id="pending-reasons-list" style="margin-top:18px; display:none;">
+              <div
+                style="font-size:11px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:.6px; margin-bottom:8px;">
+                Currently Saved Reasons</div>
+              <div id="pending-reasons-preview"
+                style="background:var(--bg); border-radius:var(--r-sm); border:1px solid var(--glass-border); padding:14px 16px; font-size:12.5px; line-height:2;">
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="go-btn-wrap">
+        <div class="go-summary" id="go-summary">Paste at least one sheet to get started</div>
+        <button class="go-btn" id="go-btn" onclick="processAllPasted()" disabled>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            class="lucide lucide-rocket-icon lucide-rocket">
+            <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
+            <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09" />
+            <path d="M9 12a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.4 22.4 0 0 1-4 2z" />
+            <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 .05 5 .05" />
+          </svg>Generate Dashboard
+        </button>
+      </div>
+
+      <div id="parse-error"></div>
+
+      <div class="how-it-works">
+        <h4>📖 How to paste from Excel / Google Sheets</h4>
+        <div class="how-steps">
+          <div class="how-step">
+            <div class="how-num">1</div>
+            <p>Open your Excel/Sheets file and go to the sheet tab</p>
+          </div>
+          <div class="how-step">
+            <div class="how-num">2</div>
+            <p>Press <b>Ctrl+A</b> to select all data in the sheet</p>
+          </div>
+          <div class="how-step">
+            <div class="how-num">3</div>
+            <p>Press <b>Ctrl+C</b> to copy the selected data</p>
+          </div>
+          <div class="how-step">
+            <div class="how-num">4</div>
+            <p>Click the tab above and press <b>Ctrl+V</b> to paste</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD VIEW -->
+    <div id="dash-view">
+
+      <!-- BILLING SECTION -->
+      <div id="sec-billing" class="dash-section" style="display:none; --i:1">
+        <div class="dash-header">
+          <div>
+            <div class="dash-title">Billing Summary</div>
+            <div class="dash-subtitle">Charge tracking: Previous Pending → Received → Completed → Pending</div>
+          </div>
+          <div class="dash-header-right">
+            <button class="btn-export" onclick="openExport('billing')">⬇ Export</button>
+            <button class="btn-outline" onclick="requestPasteAccess()">↑ Paste New Data</button>
+          </div>
+        </div>
+        <!-- BILLING INSIGHTS -->
+        <div class="insights-panel" id="ins-panel-billing">
+          <div class="insights-header" onclick="toggleInsights('billing')">
+            <div class="insights-header-left">
+              <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                  class="lucide lucide-siren-icon lucide-siren">
+                  <path d="M7 18v-6a5 5 0 1 1 10 0v6" />
+                  <path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z" />
+                  <path d="M21 12h1" />
+                  <path d="M18.5 4.5 18 5" />
+                  <path d="M2 12h1" />
+                  <path d="M12 2v1" />
+                  <path d="m4.929 4.929.707.707" />
+                  <path d="M12 12v6" />
+                </svg></span>
+              <span class="insights-header-title">Insights</span>
+              <span class="insights-header-count" id="ins-count-billing">0</span>
+            </div>
+            <span class="insights-toggle-icon open" id="ins-toggle-billing">▼</span>
+          </div>
+          <div class="insights-body" id="ins-body-billing"></div>
+        </div>
+        <div class="filters-bar">
+          <div class="filter-group">
+            <span class="filter-label">View</span>
+            <div class="seg-btn-group" id="b-period-btns">
+              <button class="seg-btn active" onclick="setPeriod('b','day',this)">Day</button>
+              <button class="seg-btn" onclick="setPeriod('b','month',this)">Month</button>
+              <button class="seg-btn" onclick="setPeriod('b','year',this)">Year</button>
+            </div>
+          </div>
+          <div class="filter-sep"></div>
+          <div class="filter-group" id="b-day-filter">
+            <span class="filter-label">Date</span>
+            <input type="date" id="b-date-single" onchange="renderBilling()" />
+          </div>
+          <div class="filter-group" id="b-month-filter" style="display:none">
+            <span class="filter-label">Month</span>
+            <select id="b-month-sel" onchange="renderBilling()"></select>
+          </div>
+          <div class="filter-group" id="b-year-filter" style="display:none">
+            <span class="filter-label">Year</span>
+            <select id="b-year-sel" onchange="renderBilling()"></select>
+          </div>
+          <div class="filter-sep"></div>
+          <div class="filter-group">
+            <span class="filter-label">Provider</span>
+            <select id="b-prov" onchange="renderBilling()"></select>
+          </div>
+        </div>
+        <div class="content">
+          <div class="info-banner">ℹ️ <span><b>How it works:</b> Each day starts with <b>Previous Pending</b> (unsent
+              claims from prior day). Add today's <b>Received</b> new claims → <b>Total = Prev Pending + Received</b>.
+              From this total, <b>Completed</b> are billed and <b>Pending</b> carry forward to tomorrow.</span></div>
+          <!-- PENDING REASON BANNER (shown when a single provider is selected) -->
+          <div id="b-reason-banner" style="display:none"></div>
+          <!-- PENDING REASONS SUMMARY (shown when All Providers selected) -->
+          <div id="b-reason-summary" style="display:none" class="reason-summary-card">
+            <div class="reason-summary-header">
+              <div class="reason-summary-title">⚠️ Pending Claim Reasons</div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Provider / Client</th>
+                    <th>Pending Reason / Notes</th>
+                  </tr>
+                </thead>
+                <tbody id="b-reason-tbl"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="kpi-grid" id="b-kpis"></div>
+          <div class="charts-row cols-2">
+            <div class="chart-card">
+              <div class="chart-title">
+                <div class="ct-dot" style="background:var(--blue)"></div>Received vs Completed Over Time
+              </div>
+              <div class="chart-wrap"><canvas id="b-c1"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">
+                <div class="ct-dot" style="background:var(--purple)"></div>Provider Comparison
+              </div>
+              <div class="chart-wrap"><canvas id="b-c2"></canvas></div>
+            </div>
+          </div>
+          <div class="charts-row cols-1">
+            <div class="chart-card">
+              <div class="chart-title">
+                <div class="ct-dot" style="background:var(--yellow)"></div>Pending Load Over Time (Stacked)
+              </div>
+              <div class="chart-wrap"><canvas id="b-c3"></canvas></div>
+            </div>
+          </div>
+          <div class="table-card">
+            <div class="table-card-header">
+              <div class="table-card-title">Provider Breakdown</div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Provider / Client</th>
+                    <th>Prev Pending</th>
+                    <th>Received</th>
+                    <th>Total (Prev+Rec)</th>
+                    <th>Completed</th>
+                    <th>Pending</th>
+                    <th>Completion Rate</th>
+                    <th>Pending Reason</th>
+                  </tr>
+                </thead>
+                <tbody id="b-tbl"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- POSTING SECTION -->
+      <div id="sec-posting" class="dash-section" style="display:none; --i:2">
+        <div class="dash-header">
+          <div>
+            <div class="dash-title">Payment Posting Summary</div>
+            <div class="dash-subtitle">ERA & EOB payments — received, completed, posted amounts</div>
+          </div>
+          <div class="dash-header-right">
+            <button class="btn-export" onclick="openExport('posting')">⬇ Export</button>
+            <button class="btn-outline" onclick="requestPasteAccess()">↑ Paste New Data</button>
+          </div>
+        </div>
+        <!-- POSTING INSIGHTS -->
+        <div class="insights-panel" id="ins-panel-posting">
+          <div class="insights-header" onclick="toggleInsights('posting')">
+            <div class="insights-header-left">
+              <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                  class="lucide lucide-siren-icon lucide-siren">
+                  <path d="M7 18v-6a5 5 0 1 1 10 0v6" />
+                  <path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z" />
+                  <path d="M21 12h1" />
+                  <path d="M18.5 4.5 18 5" />
+                  <path d="M2 12h1" />
+                  <path d="M12 2v1" />
+                  <path d="m4.929 4.929.707.707" />
+                  <path d="M12 12v6" />
+                </svg></span>
+              <span class="insights-header-title">Insights</span>
+              <span class="insights-header-count" id="ins-count-posting">0</span>
+            </div>
+            <span class="insights-toggle-icon open" id="ins-toggle-posting">▼</span>
+          </div>
+          <div class="insights-body" id="ins-body-posting"></div>
+        </div>
+        <div class="filters-bar">
+          <div class="filter-group">
+            <span class="filter-label">View</span>
+            <div class="seg-btn-group" id="p-period-btns">
+              <button class="seg-btn active" onclick="setPeriod('p','day',this)">Day</button>
+              <button class="seg-btn" onclick="setPeriod('p','month',this)">Month</button>
+              <button class="seg-btn" onclick="setPeriod('p','year',this)">Year</button>
+            </div>
+          </div>
+          <div class="filter-sep"></div>
+          <div class="filter-group" id="p-day-filter">
+            <span class="filter-label">Date</span>
+            <input type="date" id="p-date-single" onchange="renderPosting()" />
+          </div>
+          <div class="filter-group" id="p-month-filter" style="display:none">
+            <span class="filter-label">Month</span>
+            <select id="p-month-sel" onchange="renderPosting()"></select>
+          </div>
+          <div class="filter-group" id="p-year-filter" style="display:none">
+            <span class="filter-label">Year</span>
+            <select id="p-year-sel" onchange="renderPosting()"></select>
+          </div>
+          <div class="filter-sep"></div>
+          <div class="filter-group">
+            <span class="filter-label">Type</span>
+            <select id="p-type" onchange="renderPosting()">
+              <option value="all">ERA + EOB</option>
+              <option value="ERA">ERA Only</option>
+              <option value="EOB">EOB Only</option>
+            </select>
+          </div>
+          <div class="filter-sep"></div>
+          <div class="filter-group">
+            <span class="filter-label">Provider</span>
+            <select id="p-prov" onchange="renderPosting()"></select>
+          </div>
+        </div>
+        <div class="content">
+          <div class="kpi-grid" id="p-kpis"></div>
+          <div class="charts-row cols-2">
+            <div class="chart-card">
+              <div class="chart-title">
+                <div class="ct-dot" style="background:var(--green)"></div>Amount Received vs Posted
+              </div>
+              <div class="chart-wrap"><canvas id="p-c1"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">
+                <div class="ct-dot" style="background:var(--blue)"></div>ERA vs EOB Count
+              </div>
+              <div class="chart-wrap"><canvas id="p-c2"></canvas></div>
+            </div>
+          </div>
+          <div class="charts-row cols-1">
+            <div class="chart-card">
+              <div class="chart-title">
+                <div class="ct-dot" style="background:var(--purple)"></div>Provider-wise Posted Amount
+              </div>
+              <div class="chart-wrap"><canvas id="p-c3"></canvas></div>
+            </div>
+          </div>
+          <div class="table-card">
+            <div class="table-card-header">
+              <div class="table-card-title">Posting Detail</div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Provider</th>
+                    <th>Type</th>
+                    <th>Prev Pending</th>
+                    <th>Received</th>
+                    <th>Completed</th>
+                    <th>Pending</th>
+                    <th>Amt Received</th>
+                    <th>Posted Amt</th>
+                  </tr>
+                </thead>
+                <tbody id="p-tbl"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- REJECTIONS SECTION -->
+      <div id="sec-rejections" class="dash-section" style="display:none; --i:3">
+        <div class="dash-header">
+          <div>
+            <div class="dash-title">Rejection Summary</div>
+            <div class="dash-subtitle">Claim rejections by provider — received, resolved, outstanding</div>
+          </div>
+          <div class="dash-header-right">
+            <button class="btn-export" onclick="openExport('rejections')">⬇ Export</button>
+            <button class="btn-outline" onclick="requestPasteAccess()">↑ Paste New Data</button>
+          </div>
+        </div>
+        <!-- REJECTIONS INSIGHTS -->
+        <div class="insights-panel" id="ins-panel-rejections">
+          <div class="insights-header" onclick="toggleInsights('rejections')">
+            <div class="insights-header-left">
+              <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                  class="lucide lucide-siren-icon lucide-siren">
+                  <path d="M7 18v-6a5 5 0 1 1 10 0v6" />
+                  <path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z" />
+                  <path d="M21 12h1" />
+                  <path d="M18.5 4.5 18 5" />
+                  <path d="M2 12h1" />
+                  <path d="M12 2v1" />
+                  <path d="m4.929 4.929.707.707" />
+                  <path d="M12 12v6" />
+                </svg></span>
+              <span class="insights-header-title">Insights</span>
+              <span class="insights-header-count" id="ins-count-rejections">0</span>
+            </div>
+            <span class="insights-toggle-icon open" id="ins-toggle-rejections">▼</span>
+          </div>
+          <div class="insights-body" id="ins-body-rejections"></div>
+        </div>
+        <div class="filters-bar">
+          <div class="filter-group">
+            <span class="filter-label">View</span>
+            <div class="seg-btn-group" id="r-period-btns">
+              <button class="seg-btn active" onclick="setPeriod('r','day',this)">Day</button>
+              <button class="seg-btn" onclick="setPeriod('r','month',this)">Month</button>
+              <button class="seg-btn" onclick="setPeriod('r','year',this)">Year</button>
+            </div>
+          </div>
+          <div class="filter-sep"></div>
+          <div class="filter-group" id="r-day-filter">
+            <span class="filter-label">Date</span>
+            <input type="date" id="r-date-single" onchange="renderRejections()" />
+          </div>
+          <div class="filter-group" id="r-month-filter" style="display:none">
+            <span class="filter-label">Month</span>
+            <select id="r-month-sel" onchange="renderRejections()"></select>
+          </div>
+          <div class="filter-group" id="r-year-filter" style="display:none">
+            <span class="filter-label">Year</span>
+            <select id="r-year-sel" onchange="renderRejections()"></select>
+          </div>
+          <div class="filter-sep"></div>
+          <div class="filter-group">
+            <span class="filter-label">Provider</span>
+            <select id="r-prov" onchange="renderRejections()"></select>
+          </div>
+        </div>
+        <div class="content">
+          <div class="kpi-grid" id="r-kpis"></div>
+          <div class="charts-row cols-2">
+            <div class="chart-card">
+              <div class="chart-title">
+                <div class="ct-dot" style="background:var(--red)"></div>Rejections Over Time
+              </div>
+              <div class="chart-wrap"><canvas id="r-c1"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">
+                <div class="ct-dot" style="background:var(--orange)"></div>By Provider
+              </div>
+              <div class="chart-wrap"><canvas id="r-c2"></canvas></div>
+            </div>
+          </div>
+          <div class="charts-row cols-1">
+            <div class="chart-card">
+              <div class="chart-title">
+                <div class="ct-dot" style="background:var(--yellow)"></div>Received vs Completed vs Pending
+              </div>
+              <div class="chart-wrap"><canvas id="r-c3"></canvas></div>
+            </div>
+          </div>
+          <div class="table-card">
+            <div class="table-card-header">
+              <div class="table-card-title">Rejection Detail</div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Provider</th>
+                    <th>Received</th>
+                    <th>Completed</th>
+                    <th>Pending</th>
+                    <th>Resolution Rate</th>
+                  </tr>
+                </thead>
+                <tbody id="r-tbl"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DENIALS SECTION -->
+      <div id="sec-denials" class="dash-section" style="display:none; --i:4">
+        <div class="dash-header">
+          <div>
+            <div class="dash-title">Daily Denial Summary</div>
+            <div class="dash-subtitle">Insurance denial counts by provider over time</div>
+          </div>
+          <div class="dash-header-right">
+            <button class="btn-export" onclick="openExport('denials')">⬇ Export</button>
+            <button class="btn-outline" onclick="requestPasteAccess()">↑ Paste New Data</button>
+          </div>
+        </div>
+        <!-- DENIALS INSIGHTS -->
+        <div class="insights-panel" id="ins-panel-denials">
+          <div class="insights-header" onclick="toggleInsights('denials')">
+            <div class="insights-header-left">
+              <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                  class="lucide lucide-siren-icon lucide-siren">
+                  <path d="M7 18v-6a5 5 0 1 1 10 0v6" />
+                  <path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z" />
+                  <path d="M21 12h1" />
+                  <path d="M18.5 4.5 18 5" />
+                  <path d="M2 12h1" />
+                  <path d="M12 2v1" />
+                  <path d="m4.929 4.929.707.707" />
+                  <path d="M12 12v6" />
+                </svg></span>
+              <span class="insights-header-title">Insights</span>
+              <span class="insights-header-count" id="ins-count-denials">0</span>
+            </div>
+            <span class="insights-toggle-icon open" id="ins-toggle-denials">▼</span>
+          </div>
+          <div class="insights-body" id="ins-body-denials"></div>
+        </div>
+        <div class="filters-bar">
+          <div class="filter-group">
+            <span class="filter-label">View</span>
+            <div class="seg-btn-group" id="d-period-btns">
+              <button class="seg-btn active" onclick="setPeriod('d','day',this)">Day</button>
+              <button class="seg-btn" onclick="setPeriod('d','month',this)">Month</button>
+              <button class="seg-btn" onclick="setPeriod('d','year',this)">Year</button>
+            </div>
+          </div>
+          <div class="filter-sep"></div>
+          <div class="filter-group" id="d-day-filter">
+            <span class="filter-label">Date</span>
+            <input type="date" id="d-date-single" onchange="renderDenials()" />
+          </div>
+          <div class="filter-group" id="d-month-filter" style="display:none">
+            <span class="filter-label">Month</span>
+            <select id="d-month-sel" onchange="renderDenials()"></select>
+          </div>
+          <div class="filter-group" id="d-year-filter" style="display:none">
+            <span class="filter-label">Year</span>
+            <select id="d-year-sel" onchange="renderDenials()"></select>
+          </div>
+          <div class="filter-sep"></div>
+          <div class="filter-group">
+            <span class="filter-label">Provider</span>
+            <select id="d-prov" onchange="renderDenials()"></select>
+          </div>
+        </div>
+        <div class="content">
+          <div class="kpi-grid" id="d-kpis"></div>
+          <div class="charts-row cols-2">
+            <div class="chart-card">
+              <div class="chart-title">
+                <div class="ct-dot" style="background:var(--red)"></div>Denial Trend
+              </div>
+              <div class="chart-wrap"><canvas id="d-c1"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">
+                <div class="ct-dot" style="background:var(--orange)"></div>Provider Distribution
+              </div>
+              <div class="chart-wrap"><canvas id="d-c2"></canvas></div>
+            </div>
+          </div>
+          <div class="charts-row cols-1">
+            <div class="chart-card">
+              <div class="chart-title">
+                <div class="ct-dot" style="background:var(--purple)"></div>Provider-wise Denials Over Time
+              </div>
+              <div class="chart-wrap"><canvas id="d-c3"></canvas></div>
+            </div>
+          </div>
+          <div class="table-card">
+            <div class="table-card-header">
+              <div class="table-card-title">Denial Detail</div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Provider</th>
+                    <th>Total Denials</th>
+                    <th>% of Total</th>
+                    <th>Share Bar</th>
+                  </tr>
+                </thead>
+                <tbody id="d-tbl"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end dash-view -->
+  </div><!-- end main -->
+
+  <!-- PENDING REASON EDIT MODAL -->
+  <div id="reason-modal-overlay">
+    <div id="reason-modal">
+      <div class="reason-modal-title">✏️ Edit Pending Reason</div>
+      <div class="reason-modal-sub">Set the reason for pending claims for <span class="reason-modal-provider"
+          id="reason-modal-prov-name">—</span></div>
+      <div class="reason-modal-label">Reason / Notes</div>
+      <textarea class="reason-modal-textarea" id="reason-modal-input"
+        placeholder="e.g. Provider Sign Off Missing, ECW errors, No Auth pending, etc."></textarea>
+      <div class="reason-modal-footer">
+        <button class="btn-outline" onclick="closeReasonModal()">Cancel</button>
+        <button class="btn-primary" onclick="saveReason()">Save Reason</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════
+    // GLOBALS & CHART SETUP
+    // ═══════════════════════════════════════════
+    Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+    Chart.defaults.color = '#64748b';
+    Chart.defaults.borderColor = 'rgba(0,0,0,0.05)';
+    Chart.defaults.plugins.legend.labels.boxWidth = 10;
+    Chart.defaults.plugins.legend.labels.font = { size: 11 };
+
+    const COLORS = ['#2563eb', '#10b981', '#6366f1', '#ef4444', '#f59e0b', '#f59e0b', '#0891b2', '#be185d'];
+    const ML = { '01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr', '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Aug', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec' };
+
+    let RAW = { billing: [], posting: [], rejections: [], denials: [] };
+    let PER = { b: 'day', p: 'day', r: 'day', d: 'day' };
+    let CHARTS = {};
+    let fileLoaded = false;
+    let currentSection = 'upload';
+
+    // ═══════════════════════════════════════════
+    // LOADING OVERLAY
+    // ═══════════════════════════════════════════
+    function hideLoadingOverlay() {
+      const el = document.getElementById('loading-overlay');
+      if (!el) return;
+      el.classList.add('hide');
+      setTimeout(() => {
+        if (el.parentNode) el.parentNode.removeChild(el);
+        // If no data was restored, show the upload view now (not before)
+        if (!fileLoaded) {
+          document.getElementById('upload-view').style.display = 'flex';
+        }
+      }, 280);
+    }
+
+    // ═══════════════════════════════════════════
+    // PIN PROTECTION  (password lives in server.py — never in this file)
+    // ═══════════════════════════════════════════
+    let pinUnlocked = false;
+
+    function requestPasteAccess() {
+      if (pinUnlocked) { openUploadView(); return; }
+      document.getElementById('pin-overlay').classList.add('active');
+      document.getElementById('pin-input').value = '';
+      document.getElementById('pin-error').textContent = '';
+      setTimeout(() => document.getElementById('pin-input').focus(), 100);
+    }
+
+    function checkPin() {
+      const val = document.getElementById('pin-input').value;
+      const btn = document.getElementById('pin-submit');
+      btn.disabled = true;
+      btn.textContent = 'Checking…';
+
+      fetch('/api/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: val })
+      })
+        .then(r => r.json())
+        .then(data => {
+          btn.disabled = false;
+          btn.textContent = 'Unlock';
+          if (data.ok) {
+            pinUnlocked = true;
+            closePin();
+            openUploadView();
+          } else {
+            const inp = document.getElementById('pin-input');
+            inp.classList.remove('shake');
+            void inp.offsetWidth;
+            inp.classList.add('shake');
+            document.getElementById('pin-error').textContent = '✖ Incorrect password. Try again.';
+            inp.value = '';
+            setTimeout(() => inp.classList.remove('shake'), 400);
+          }
+        })
+        .catch(() => {
+          btn.disabled = false;
+          btn.textContent = 'Unlock';
+          document.getElementById('pin-error').textContent = '⚠ Server error. Try again.';
+        });
+    }
+
+    function closePin() {
+      document.getElementById('pin-overlay').classList.remove('active');
+      document.getElementById('pin-input').value = '';
+      document.getElementById('pin-error').textContent = '';
+    }
+
+    // ═══════════════════════════════════════════
+    // CHANGE PASSWORD
+    // ═══════════════════════════════════════════
+    function openChangePwd() {
+      document.getElementById('chgpwd-current').value = '';
+      document.getElementById('chgpwd-newpin').value = '';
+      document.getElementById('chgpwd-confirm').value = '';
+      document.getElementById('chgpwd-err').textContent = '';
+      document.getElementById('chgpwd-success-msg').style.display = 'none';
+      const btn = document.getElementById('chgpwd-btn');
+      btn.disabled = false;
+      btn.textContent = 'Change Password';
+      btn.style.display = '';
+      document.querySelector('#chgpwd-box .chgpwd-btn-cancel').textContent = 'Cancel';
+      document.getElementById('chgpwd-overlay').classList.add('active');
+      setTimeout(() => document.getElementById('chgpwd-current').focus(), 100);
+    }
+
+    function closeChangePwd() {
+      document.getElementById('chgpwd-overlay').classList.remove('active');
+    }
+
+    function chgpwdSubmit() {
+      const currentPin = document.getElementById('chgpwd-current').value;
+      const newPin = document.getElementById('chgpwd-newpin').value.trim();
+      const confirm = document.getElementById('chgpwd-confirm').value.trim();
+      const errEl = document.getElementById('chgpwd-err');
+      const btn = document.getElementById('chgpwd-btn');
+
+      errEl.textContent = '';
+      if (!currentPin) { errEl.textContent = '✖ Please enter the current password.'; return; }
+      if (newPin.length < 6) { errEl.textContent = '✖ New password must be at least 6 characters.'; return; }
+      if (newPin !== confirm) { errEl.textContent = '✖ New passwords do not match.'; return; }
+      if (newPin === currentPin) { errEl.textContent = '✖ New password must be different from current.'; return; }
+
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+
+      fetch('/api/change-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_pin: currentPin, new_pin: newPin })
+      })
+        .then(r => r.json())
+        .then(data => {
+          btn.disabled = false;
+          btn.textContent = 'Change Password';
+          if (data.ok) {
+            pinUnlocked = false; // force re-login with new password
+            document.getElementById('chgpwd-success-msg').style.display = 'block';
+            document.getElementById('chgpwd-btn').style.display = 'none';
+            document.querySelector('#chgpwd-box .chgpwd-btn-cancel').textContent = 'Close';
+          } else {
+            errEl.textContent = '✖ ' + (data.error || 'Failed to change password.');
+          }
+        })
+        .catch(() => {
+          btn.disabled = false;
+          btn.textContent = 'Change Password';
+          errEl.textContent = '⚠ Server error. Please try again.';
+        });
+    }
+
+    // Enter key support
+    document.addEventListener('DOMContentLoaded', () => {
+      ['chgpwd-current', 'chgpwd-newpin', 'chgpwd-confirm'].forEach((id, i, arr) => {
+        document.getElementById(id).addEventListener('keydown', e => {
+          if (e.key === 'Enter') {
+            if (i < arr.length - 1) document.getElementById(arr[i + 1]).focus();
+            else chgpwdSubmit();
+          }
+        });
+      });
+    });
+
+    function openUploadView() {
+      currentSection = 'upload';
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('nav-upload').classList.add('active');
+      document.getElementById('upload-view').style.display = 'flex';
+      document.getElementById('dash-view').style.display = 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('pin-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') checkPin();
+        if (e.key === 'Escape') closePin();
+      });
+      document.getElementById('pin-overlay').addEventListener('click', e => {
+        if (e.target === document.getElementById('pin-overlay')) closePin();
+      });
+    });
+
+    function switchSection(name) {
+      if (!fileLoaded && name !== 'upload') {
+        alert('Please upload an Excel file first.');
+        return;
+      }
+      currentSection = name;
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      const navEl = document.getElementById('nav-' + name);
+      if (navEl) navEl.classList.add('active');
+
+      document.getElementById('upload-view').style.display = 'none';
+      document.getElementById('dash-view').style.display = 'none';
+      document.querySelectorAll('.dash-section').forEach(s => s.style.display = 'none');
+
+      if (name === 'upload') {
+        document.getElementById('upload-view').style.display = 'flex';
+      } else {
+        document.getElementById('dash-view').style.display = 'flex';
+        const sec = document.getElementById('sec-' + name);
+        if (sec) sec.style.display = 'block';
+        if (name === 'billing') renderBilling();
+        else if (name === 'posting') renderPosting();
+        else if (name === 'rejections') renderRejections();
+        else if (name === 'denials') renderDenials();
+      }
+    }
+
+    // ═══════════════════════════════════════════
+    // PASTE INPUT SYSTEM
+    // ═══════════════════════════════════════════
+    const PASTE_DATA = { billing: '', posting: '', rejections: '', denials: '' };
+    const PASTE_COUNTS = { billing: 0, posting: 0, rejections: 0, denials: 0 };
+    let activeTab = 'billing';
+
+    function switchTab(name) {
+      activeTab = name;
+      document.querySelectorAll('.paste-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.paste-panel').forEach(p => p.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+      document.getElementById('panel-' + name).classList.add('active');
+      if (name === 'pending-reasons') loadPendingReasonsEditor();
+    }
+
+    function loadPendingReasonsEditor() {
+      // Populate the textarea with existing reasons
+      const provs = Object.keys(PENDING_REASONS).sort();
+      const lines = provs.length
+        ? provs.map(p => `${p}: ${PENDING_REASONS[p] || ''}`).join('\n')
+        : '';
+      const ta = document.getElementById('paste-pending-reasons');
+      if (ta && !ta.value.trim()) ta.value = lines;
+      renderPendingReasonsPreview();
+    }
+
+    function onPendingReasonsInput() {
+      document.getElementById('status-pending-reasons').textContent = 'Unsaved changes — click Save Reasons to apply';
+      document.getElementById('status-pending-reasons').className = 'paste-status';
+    }
+
+    function clearPendingReasonsEditor() {
+      document.getElementById('paste-pending-reasons').value = '';
+      document.getElementById('status-pending-reasons').textContent = 'Cleared. Click Save Reasons to remove all reasons.';
+      document.getElementById('status-pending-reasons').className = 'paste-status';
+    }
+
+    function savePendingReasonsFromEditor() {
+      const text = document.getElementById('paste-pending-reasons').value.trim();
+      // Reset first
+      PENDING_REASONS = {};
+      if (text) {
+        text.split('\n').forEach(line => {
+          const idx = line.indexOf(':');
+          if (idx > 0) {
+            const prov = line.substring(0, idx).trim();
+            const reason = line.substring(idx + 1).trim();
+            if (prov) PENDING_REASONS[prov] = reason;
+          }
+        });
+      }
+      saveReasonsToStorage();
+      const count = Object.keys(PENDING_REASONS).length;
+      const st = document.getElementById('status-pending-reasons');
+      st.textContent = `✔ ${count} provider reason${count !== 1 ? 's' : ''} saved successfully`;
+      st.className = 'paste-status ok';
+      renderPendingReasonsPreview();
+    }
+
+    function renderPendingReasonsPreview() {
+      const listEl = document.getElementById('pending-reasons-list');
+      const previewEl = document.getElementById('pending-reasons-preview');
+      const provs = Object.keys(PENDING_REASONS).filter(p => PENDING_REASONS[p]);
+      if (!provs.length) {
+        listEl.style.display = 'none';
+        return;
+      }
+      listEl.style.display = 'block';
+      previewEl.innerHTML = provs.sort().map(p =>
+        `<div style="display:flex;align-items:baseline;gap:10px;border-bottom:1px solid rgba(185,145,145,0.15);padding:4px 0;">
+      <span style="font-weight:600;color:var(--text);min-width:160px;">${escHtml(p)}</span>
+      <span style="color:var(--yellow);font-size:12px;">⚠️ ${escHtml(PENDING_REASONS[p])}</span>
+    </div>`
+      ).join('');
+    }
+
+    function onPasteInput(name) {
+      const val = document.getElementById('paste-' + name).value.trim();
+      PASTE_DATA[name] = val;
+      const rows = val ? val.split('\n').filter(l => l.trim()).length : 0;
+      const statusEl = document.getElementById('status-' + name);
+      const tabEl = document.getElementById('tab-' + name);
+
+      if (!val) {
+        statusEl.textContent = 'Waiting for data…';
+        statusEl.className = 'paste-status';
+        tabEl.classList.remove('has-data');
+        PASTE_COUNTS[name] = 0;
+      } else {
+        const parsed = quickCount(name, val);
+        if (parsed > 0) {
+          statusEl.textContent = `✔ ${rows} rows pasted → ~${parsed} data records detected`;
+          statusEl.className = 'paste-status ok';
+          tabEl.classList.add('has-data');
+          PASTE_COUNTS[name] = parsed;
+        } else {
+          statusEl.textContent = `⚠ ${rows} rows pasted but no valid data detected — check format`;
+          statusEl.className = 'paste-status err';
+          tabEl.classList.remove('has-data');
+          PASTE_COUNTS[name] = 0;
+        }
+      }
+      updateGoButton();
+    }
+
+    function quickCount(name, text) {
+      try {
+        const rows = parseTSV(text);
+        if (name === 'billing') return parseBillingRows(rows).length;
+        if (name === 'posting') return parsePostingRows(rows).length;
+        if (name === 'rejections') return parseRejectionsRows(rows).length;
+        if (name === 'denials') return parseDenialsRows(rows).length;
+      } catch (e) { }
+      return 0;
+    }
+
+    function updateGoButton() {
+      const total = Object.values(PASTE_COUNTS).reduce((a, b) => a + b, 0);
+      const btn = document.getElementById('go-btn');
+      const sumEl = document.getElementById('go-summary');
+      const filled = Object.entries(PASTE_COUNTS).filter(([, v]) => v > 0);
+
+      if (total > 0) {
+        btn.disabled = false;
+        const parts = filled.map(([k, v]) => `<span>${v} ${k}</span>`).join(', ');
+        sumEl.innerHTML = `Ready: ${parts} records`;
+      } else {
+        btn.disabled = true;
+        sumEl.innerHTML = 'Paste at least one sheet to get started';
+      }
+    }
+
+    function clearPaste(name) {
+      document.getElementById('paste-' + name).value = '';
+      PASTE_DATA[name] = '';
+      PASTE_COUNTS[name] = 0;
+      document.getElementById('status-' + name).textContent = 'Waiting for data…';
+      document.getElementById('status-' + name).className = 'paste-status';
+      document.getElementById('tab-' + name).classList.remove('has-data');
+      updateGoButton();
+    }
+
+    function setErr(msg) {
+      const el = document.getElementById('parse-error');
+      el.style.display = 'block'; el.innerHTML = '⚠ ' + msg;
+    }
+
+    function parseTSV(text) {
+      return text.split('\n').map(line => line.split('\t').map(cell => cell.trim()));
+    }
+
+    function processAllPasted() {
+      document.getElementById('parse-error').style.display = 'none';
+      try {
+        RAW.billing = PASTE_DATA.billing ? parseBillingRows(parseTSV(PASTE_DATA.billing)) : [];
+        RAW.posting = PASTE_DATA.posting ? parsePostingRows(parseTSV(PASTE_DATA.posting)) : [];
+        RAW.rejections = PASTE_DATA.rejections ? parseRejectionsRows(parseTSV(PASTE_DATA.rejections)) : [];
+        RAW.denials = PASTE_DATA.denials ? parseDenialsRows(parseTSV(PASTE_DATA.denials)) : [];
+
+        const total = RAW.billing.length + RAW.posting.length + RAW.rejections.length + RAW.denials.length;
+        if (!total) {
+          setErr('No valid data found in any pasted sheet. Check that you copied the right tab and that dates are in the first column.');
+          return;
+        }
+        fileLoaded = true;
+
+        const payload = JSON.stringify({ paste: PASTE_DATA, raw: RAW });
+        fetch('/api/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload
+        }).catch(() => {
+          try {
+            localStorage.setItem('medbill_paste', JSON.stringify(PASTE_DATA));
+            localStorage.setItem('medbill_raw', JSON.stringify(RAW));
+          } catch (e) { }
+        });
+
+        finishLoad();
+      } catch (err) {
+        setErr('Parse error: ' + err.message + '. Make sure you copied the full sheet including headers.');
+      }
+    }
+
+    function finishLoad() {
+      const filled = [];
+      if (RAW.billing.length) filled.push('billing');
+      if (RAW.posting.length) filled.push('posting');
+      if (RAW.rejections.length) filled.push('rejections');
+      if (RAW.denials.length) filled.push('denials');
+
+      document.getElementById('sb-filename').textContent = filled.join(', ') + ' sheet' + (filled.length > 1 ? 's' : '');
+      document.getElementById('sb-rows').textContent =
+        `${RAW.billing.length} billing · ${RAW.posting.length} posting · ${RAW.rejections.length} rejection · ${RAW.denials.length} denial rows`;
+      document.getElementById('file-box').style.display = 'block';
+
+      initSelects();
+      const first = RAW.billing.length ? 'billing' : RAW.posting.length ? 'posting' : RAW.rejections.length ? 'rejections' : 'denials';
+      switchSection(first);
+    }
+
+    // ── Restore persisted data on page load ──
+    function tryRestoreFromStorage() {
+      fetch('/api/load')
+        .then(r => r.json())
+        .then(saved => {
+          if (saved && saved.raw) {
+            applyRestoredData(saved.raw, saved.paste);
+          } else {
+            tryLocalStorage();
+          }
+          hideLoadingOverlay();
+        })
+        .catch(() => {
+          tryLocalStorage();
+        });
+    }
+
+    function tryLocalStorage() {
+      try {
+        const savedRaw = localStorage.getItem('medbill_raw');
+        const savedPaste = localStorage.getItem('medbill_paste');
+        if (savedRaw) {
+          const raw = JSON.parse(savedRaw);
+          const paste = savedPaste ? JSON.parse(savedPaste) : null;
+          applyRestoredData(raw, paste);
+        }
+      } catch (e) { }
+      hideLoadingOverlay();
+    }
+
+    function applyRestoredData(raw, paste) {
+      try {
+        RAW = raw;
+        const total = RAW.billing.length + RAW.posting.length + RAW.rejections.length + RAW.denials.length;
+        if (!total) return;
+
+        if (paste) {
+          Object.assign(PASTE_DATA, paste);
+          ['billing', 'posting', 'rejections', 'denials'].forEach(name => {
+            const ta = document.getElementById('paste-' + name);
+            if (ta && paste[name]) {
+              ta.value = paste[name];
+              const rows = paste[name].split('\n').filter(l => l.trim()).length;
+              const statusEl = document.getElementById('status-' + name);
+              const tabEl = document.getElementById('tab-' + name);
+              const parsed = quickCount(name, paste[name]);
+              if (parsed > 0) {
+                statusEl.textContent = `✔ ${rows} rows pasted → ~${parsed} data records detected`;
+                statusEl.className = 'paste-status ok';
+                tabEl.classList.add('has-data');
+                PASTE_COUNTS[name] = parsed;
+              }
+            }
+          });
+          updateGoButton();
+        }
+
+        fileLoaded = true;
+        finishLoad();
+      } catch (e) { }
+    }
+
+    // ─── Parsers ───
+    function toDate(val) {
+      if (!val) return null;
+      if (val instanceof Date) return isNaN(val) ? null : val;
+      if (typeof val === 'string') {
+        val = val.trim();
+        if (!val) return null;
+        const d = new Date(val);
+        if (!isNaN(d)) return d;
+        const dmyMatch = val.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+        if (dmyMatch) {
+          const [, a, b, c] = dmyMatch;
+          const year = c.length === 2 ? '20' + c : c;
+          const attempt1 = new Date(`${year}-${b.padStart(2, '0')}-${a.padStart(2, '0')}`);
+          if (!isNaN(attempt1)) return attempt1;
+        }
+      }
+      if (typeof val === 'number' && val > 40000) {
+        const d = new Date((val - 25569) * 86400 * 1000);
+        return isNaN(d) ? null : d;
+      }
+      return null;
+    }
+
+    function fd(d) {
+      if (!d) return null;
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function n(v) { const x = parseFloat(String(v).replace(/,/g, '')); return isNaN(x) ? 0 : x; }
+
+    function parseBillingRows(rows) {
+      if (!rows || rows.length < 3) return [];
+      const provs = [];
+      for (let c = 1; c < (rows[0] || []).length; c += 4) {
+        let name = rows[1] && rows[1][c] != null ? String(rows[1][c]).trim() : null;
+        if (!name && rows[0] && rows[0][c] != null) name = String(rows[0][c]).trim();
+        if (name && name !== 'Previous Pending' && name !== 'Date' && name !== '') provs.push({ name, col: c });
+      }
+      const result = [];
+      for (let i = 2; i < rows.length; i++) {
+        const d = toDate(rows[i][0]); if (!d) continue;
+        const ds = fd(d);
+        provs.forEach(p => {
+          const c = p.col;
+          result.push({
+            date: ds, provider: p.name,
+            prev_pending: n(rows[i][c]), received: n(rows[i][c + 1]),
+            completed: n(rows[i][c + 2]), pending: n(rows[i][c + 3])
+          });
+        });
+      }
+      return result;
+    }
+
+    function parsePostingRows(rows) {
+      if (!rows || rows.length < 3) return [];
+      const provs = [];
+      for (let c = 3; c < (rows[0] || []).length; c += 6) {
+        const name = rows[0][c] != null ? String(rows[0][c]).trim() : null;
+        if (name && name !== 'Date' && name !== '') provs.push({ name, col: c });
+      }
+      const result = [];
+      for (let i = 2; i < rows.length; i++) {
+        const d = toDate(rows[i][0]); if (!d) continue;
+        const ds = fd(d);
+        const typeRaw = rows[i][1] ? String(rows[i][1]).trim() : '';
+        const type = typeRaw.toUpperCase().includes('ERA') ? 'ERA' : typeRaw.toUpperCase().includes('EOB') ? 'EOB' : typeRaw;
+        provs.forEach(p => {
+          const c = p.col;
+          result.push({
+            date: ds, provider: p.name, type,
+            prev_pending: n(rows[i][c]), received: n(rows[i][c + 1]),
+            completed: n(rows[i][c + 2]), pending: n(rows[i][c + 3]),
+            amount_received: n(rows[i][c + 4]), posted_amount: n(rows[i][c + 5])
+          });
+        });
+      }
+      return result;
+    }
+
+    function parseRejectionsRows(rows) {
+      if (!rows || rows.length < 3) return [];
+      const provs = [];
+      for (let c = 1; c < (rows[0] || []).length; c += 3) {
+        const name = rows[0][c] != null ? String(rows[0][c]).trim() : null;
+        if (name && name !== 'Date' && name !== '') provs.push({ name, col: c });
+      }
+      const result = [];
+      for (let i = 2; i < rows.length; i++) {
+        const d = toDate(rows[i][0]); if (!d) continue;
+        const ds = fd(d);
+        provs.forEach(p => {
+          const c = p.col;
+          result.push({
+            date: ds, provider: p.name,
+            received: n(rows[i][c]), completed: n(rows[i][c + 1]), pending: n(rows[i][c + 2])
+          });
+        });
+      }
+      return result;
+    }
+
+    function parseDenialsRows(rows) {
+      if (!rows || rows.length < 2) return [];
+      const provCols = [];
+      for (let c = 1; c < (rows[0] || []).length; c++) {
+        if (rows[0][c] != null && String(rows[0][c]).trim() !== '') {
+          provCols.push({ name: String(rows[0][c]).trim(), col: c });
+        }
+      }
+      const result = [];
+      for (let i = 1; i < rows.length; i++) {
+        const d = toDate(rows[i][0]); if (!d) continue;
+        const ds = fd(d);
+        provCols.forEach(p => result.push({ date: ds, provider: p.name, count: n(rows[i][p.col]) }));
+      }
+      return result;
+    }
+
+    // ═══════════════════════════════════════════
+    // INIT SELECTS
+    // ═══════════════════════════════════════════
+    function initSelects() {
+      fillMonthSel('b-month-sel', RAW.billing);
+      fillYearSel('b-year-sel', RAW.billing);
+      fillProvSel('b-prov', RAW.billing);
+      setDateRange('b-date-single', RAW.billing);
+
+      fillMonthSel('p-month-sel', RAW.posting);
+      fillYearSel('p-year-sel', RAW.posting);
+      fillProvSel('p-prov', RAW.posting);
+      setDateRange('p-date-single', RAW.posting);
+
+      fillMonthSel('r-month-sel', RAW.rejections);
+      fillYearSel('r-year-sel', RAW.rejections);
+      fillProvSel('r-prov', RAW.rejections);
+      setDateRange('r-date-single', RAW.rejections);
+
+      fillMonthSel('d-month-sel', RAW.denials);
+      fillYearSel('d-year-sel', RAW.denials);
+      fillProvSel('d-prov', RAW.denials);
+      setDateRange('d-date-single', RAW.denials);
+    }
+
+    function setDateRange(id, data) {
+      const dates = data.map(r => r.date).filter(Boolean).sort();
+      if (!dates.length) return;
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.min = dates[0];
+      el.max = dates[dates.length - 1];
+      el.value = dates[0];
+    }
+
+    function fillMonthSel(id, data) {
+      const months = [...new Set(data.map(r => r.date.substring(0, 7)))].sort();
+      const el = document.getElementById(id); if (!el) return;
+      el.innerHTML = '<option value="all">All Months</option>' +
+        months.map(m => { const [y, mo] = m.split('-'); return `<option value="${m}">${ML[mo] || mo} ${y}</option>`; }).join('');
+    }
+
+    function fillYearSel(id, data) {
+      const years = [...new Set(data.map(r => r.date.substring(0, 4)))].sort();
+      const el = document.getElementById(id); if (!el) return;
+      el.innerHTML = '<option value="all">All Years</option>' +
+        years.map(y => `<option value="${y}">${y}</option>`).join('');
+    }
+
+    function fillProvSel(id, data) {
+      const provs = [...new Set(data.map(r => r.provider))].filter(Boolean).sort();
+      const el = document.getElementById(id); if (!el) return;
+      el.innerHTML = '<option value="all">All Providers</option>' +
+        provs.map(p => `<option value="${p}">${p}</option>`).join('');
+    }
+
+    // ═══════════════════════════════════════════
+    // PERIOD CONTROLS
+    // ═══════════════════════════════════════════
+    function setPeriod(px, period, btn) {
+      PER[px] = period;
+      btn.closest('.seg-btn-group').querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      document.getElementById(px + '-day-filter').style.display = period === 'day' ? 'flex' : 'none';
+      document.getElementById(px + '-month-filter').style.display = period === 'month' ? 'flex' : 'none';
+      document.getElementById(px + '-year-filter').style.display = period === 'year' ? 'flex' : 'none';
+
+      if (px === 'b') renderBilling();
+      else if (px === 'p') renderPosting();
+      else if (px === 'r') renderRejections();
+      else renderDenials();
+    }
+
+    // ═══════════════════════════════════════════
+    // DATA HELPERS
+    // ═══════════════════════════════════════════
+    function mkChart(id, cfg) {
+      if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; }
+      const el = document.getElementById(id); if (!el) return;
+      CHARTS[id] = new Chart(el, cfg);
+    }
+    function groupBy(data, fn) {
+      const m = {};
+      data.forEach(r => { const k = fn(r); if (!m[k]) m[k] = []; m[k].push(r); });
+      return m;
+    }
+    function sumF(arr, f) { return (arr || []).reduce((a, r) => a + (parseFloat(r[f]) || 0), 0); }
+
+    function pkey(r, p) {
+      if (p === 'day') return r.date;
+      if (p === 'month') return r.date.substring(0, 7);
+      return r.date.substring(0, 4);
+    }
+
+    function fK(v) {
+      if (!v && v !== 0) return '0';
+      const abs = Math.abs(v);
+      if (abs >= 1000000) return '$' + (v / 1000000).toFixed(2) + 'M';
+      if (abs >= 1000) return '$' + (v / 1000).toFixed(1) + 'K';
+      return Math.round(v).toString();
+    }
+    function fA(v) { return v ? '$' + parseFloat(v).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '$0'; }
+    function kpiCard(label, value, cls, sub) {
+      return `
+        <div class="kpi-card kpi-${cls}">
+          <div class="kpi-label">${label}</div>
+          <div class="kpi-value">${value}</div>
+          <div class="kpi-sub">${sub || ''}</div>
+        </div>`;
+    }
+
+    function applyFilters(data, px, extra) {
+      let d = [...data];
+      const prov = document.getElementById(px + '-prov')?.value;
+      if (prov && prov !== 'all') d = d.filter(r => r.provider === prov);
+
+      const period = PER[px];
+      if (period === 'day') {
+        const dateVal = document.getElementById(px + '-date-single')?.value;
+        if (dateVal) d = d.filter(r => r.date === dateVal);
+      } else if (period === 'month') {
+        const monthVal = document.getElementById(px + '-month-sel')?.value;
+        if (monthVal && monthVal !== 'all') d = d.filter(r => r.date.startsWith(monthVal));
+      } else if (period === 'year') {
+        const yearVal = document.getElementById(px + '-year-sel')?.value;
+        if (yearVal && yearVal !== 'all') d = d.filter(r => r.date.startsWith(yearVal));
+      }
+
+      return extra ? extra(d) : d;
+    }
+
+    const lOpts = (mx = 14, legend = true) => ({
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: legend, position: 'top' } },
+      scales: { x: { ticks: { maxTicksLimit: mx, font: { size: 10 } } }, y: { ticks: { font: { size: 10 } } } }
+    });
+    const bOpts = (stk = false, mx = 14) => ({
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top' } },
+      scales: {
+        x: { stacked: stk, ticks: { maxTicksLimit: mx, maxRotation: 35, font: { size: 10 } } },
+        y: { stacked: stk, ticks: { font: { size: 10 } } }
+      }
+    });
+
+    function rateColor(rate) {
+      if (rate >= 90) return 'var(--green)';
+      if (rate >= 70) return 'var(--blue)';
+      if (rate >= 50) return 'var(--yellow)';
+      return 'var(--red)';
+    }
+
+    // ═══════════════════════════════════════════
+    // BILLING RENDER
+    // ═══════════════════════════════════════════
+    function lastEntryValue(data, field) {
+      if (!data || !data.length) return 0;
+      const sortedDates = [...new Set(data.map(r => r.date))].sort();
+      const lastDate = sortedDates[sortedDates.length - 1];
+      const lastRows = data.filter(r => r.date === lastDate);
+      return sumF(lastRows, field);
+    }
+
+    function renderBilling() {
+      const data = applyFilters(RAW.billing, 'b');
+      const period = PER.b;
+
+      const tRec = sumF(data, 'received');
+      const tComp = sumF(data, 'completed');
+
+      let tPrev, tPend;
+      if (period === 'day') {
+        tPrev = sumF(data, 'prev_pending');
+        tPend = sumF(data, 'pending');
+      } else {
+        tPrev = lastEntryValue(data, 'prev_pending');
+        tPend = lastEntryValue(data, 'pending');
+      }
+
+      const tTotal = tPrev + tRec;
+      const rate = tTotal > 0 ? Math.round(tComp / tTotal * 100) : 0;
+
+      const prevSub = period === 'day' ? 'Carried from prior day' : 'Last entry of period';
+      const pendSub = period === 'day' ? 'Carry to next day' : 'Last entry of period';
+      const totalCard = period === 'day'
+        ? kpiCard('Total (Prev+Rec)', Math.round(tTotal).toLocaleString('en-US'), 'purple', 'Total to be billed')
+        : '';
+
+      document.getElementById('b-kpis').innerHTML =
+        kpiCard('Previous Pending', Math.round(tPrev).toLocaleString('en-US'), 'yellow', prevSub) +
+        kpiCard('Received', Math.round(tRec).toLocaleString('en-US'), 'blue', 'New claims received') +
+        totalCard +
+        kpiCard('Completed', Math.round(tComp).toLocaleString('en-US'), 'green', 'Successfully billed') +
+        kpiCard('Pending', Math.round(tPend).toLocaleString('en-US'), 'red', pendSub) +
+        kpiCard('Completion Rate', rate + '%', rate >= 80 ? 'green' : rate >= 50 ? 'yellow' : 'red', 'Of total = billed');
+
+      const g = groupBy(data, r => pkey(r, PER.b));
+      const lb = Object.keys(g).sort();
+      const recArr = lb.map(k => sumF(g[k], 'received'));
+      const compArr = lb.map(k => sumF(g[k], 'completed'));
+      const pendArr = lb.map(k => sumF(g[k], 'pending'));
+      const prevArr = lb.map(k => sumF(g[k], 'prev_pending'));
+      const pr = lb.length > 60 ? 0 : 3;
+
+      mkChart('b-c1', {
+        type: 'line', data: {
+          labels: lb, datasets: [
+            { label: 'Received', data: recArr, borderColor: '#3b82f6', backgroundColor: 'rgba(37,99,235,0.08)', tension: .4, fill: true, pointRadius: pr, borderWidth: 2 },
+            { label: 'Completed', data: compArr, borderColor: '#059669', backgroundColor: 'rgba(22,163,74,0.08)', tension: .4, fill: true, pointRadius: pr, borderWidth: 2 },
+            { label: 'Pending', data: pendArr, borderColor: '#f87171', backgroundColor: 'rgba(220,38,38,0.05)', tension: .4, fill: true, pointRadius: pr, borderWidth: 1.5, borderDash: [4, 3] },
+          ]
+        }, options: lOpts()
+      });
+
+      const pd = groupBy(data, r => r.provider);
+      const pl = Object.keys(pd).sort();
+      mkChart('b-c2', {
+        type: 'bar', data: {
+          labels: pl, datasets: [
+            { label: 'Received', data: pl.map(p => sumF(pd[p], 'received')), backgroundColor: '#2563eb', borderRadius: 4 },
+            { label: 'Completed', data: pl.map(p => sumF(pd[p], 'completed')), backgroundColor: '#059669', borderRadius: 4 },
+            { label: 'Pending', data: pl.map(p => sumF(pd[p], 'pending')), backgroundColor: '#dc2626', borderRadius: 4 },
+          ]
+        }, options: bOpts()
+      });
+
+      mkChart('b-c3', {
+        type: 'bar', data: {
+          labels: lb, datasets: [
+            { label: 'Prev Pending', data: prevArr, backgroundColor: 'rgba(217,119,6,0.88)', borderRadius: 2 },
+            { label: 'Received', data: recArr, backgroundColor: 'rgba(37,99,235,0.88)', borderRadius: 2 },
+            { label: 'Completed', data: compArr, backgroundColor: 'rgba(5,150,105,0.88)', type: 'line', borderColor: '#059669', fill: false, tension: .4, pointRadius: pr, borderWidth: 2 },
+          ]
+        }, options: bOpts(true)
+      });
+
+      renderInsights('billing', computeBillingInsights(data));
+
+      const selectedProv = document.getElementById('b-prov')?.value || 'all';
+      const allProviders = Object.keys(pd);
+      renderBillingReasonBanner(selectedProv, allProviders);
+
+      const showTotal = period === 'day';
+      let html = '';
+      for (const [pv, rows] of Object.entries(pd).sort()) {
+        const pp = period === 'day' ? sumF(rows, 'prev_pending') : lastEntryValue(rows, 'prev_pending');
+        const rv = sumF(rows, 'received'), co = sumF(rows, 'completed');
+        const pe = period === 'day' ? sumF(rows, 'pending') : lastEntryValue(rows, 'pending');
+        const tot = pp + rv, rt = tot > 0 ? Math.round(co / tot * 100) : 0;
+        const reason = getReason(pv);
+        const reasonCell = reason
+          ? `<td class="reason-cell"><span class="reason-pill" title="${escHtml(reason)}">${escHtml(reason.length > 40 ? reason.substring(0, 38) + '…' : reason)}</span></td>`
+          : `<td class="reason-cell"><span class="reason-pill empty">—</span></td>`;
+        html += `<tr>
+      <td class="lbl">${pv}</td>
+      <td class="c-yellow">${Math.round(pp)}</td>
+      <td class="c-blue">${Math.round(rv)}</td>
+      ${showTotal ? `<td class="c-purple">${Math.round(tot)}</td>` : ''}
+      <td class="c-green">${Math.round(co)}</td>
+      <td class="c-red">${Math.round(pe)}</td>
+      <td><div class="rate-bar"><div class="rate-bar-track"><div class="rate-bar-fill" style="width:${rt}%;background:${rateColor(rt)}"></div></div><span style="font-size:12px;font-weight:600;color:${rateColor(rt)}">${rt}%</span></div></td>
+      ${reasonCell}
+    </tr>`;
+      }
+      const colSpan = showTotal ? 8 : 7;
+      if (!html) html = `<tr><td colspan="${colSpan}" class="no-data">No data for selected filter</td></tr>`;
+      else html += `<tr class="total-row"><td class="lbl">TOTAL</td><td class="c-yellow">${Math.round(tPrev)}</td><td class="c-blue">${Math.round(tRec)}</td>${showTotal ? `<td class="c-purple">${Math.round(tTotal)}</td>` : ''}<td class="c-green">${Math.round(tComp)}</td><td class="c-red">${Math.round(tPend)}</td><td><span style="font-weight:700;color:${rateColor(rate)}">${rate}%</span></td><td></td></tr>`;
+      document.getElementById('b-tbl').innerHTML = html;
+
+      const thead = document.querySelector('#b-tbl').closest('table')?.querySelector('thead tr');
+      if (thead) {
+        thead.innerHTML = `<th>Provider / Client</th><th>Prev Pending</th><th>Received</th>${showTotal ? '<th>Total (Prev+Rec)</th>' : ''}<th>Completed</th><th>Pending</th><th>Completion Rate</th><th>Pending Reason</th>`;
+      }
+    }
+
+    // ═══════════════════════════════════════════
+    // POSTING RENDER
+    // ═══════════════════════════════════════════
+    function renderPosting() {
+      const tp = document.getElementById('p-type')?.value || 'all';
+      const data = applyFilters(RAW.posting, 'p', d => tp === 'all' ? d : d.filter(r => r.type === tp));
+
+      const tRec = sumF(data, 'received');
+      const tComp = sumF(data, 'completed');
+      const tPend = sumF(data, 'pending');
+      const tAmtR = sumF(data, 'amount_received');
+      const tPost = sumF(data, 'posted_amount');
+      const eraRec = sumF(data.filter(r => r.type === 'ERA'), 'received');
+      const eobRec = sumF(data.filter(r => r.type === 'EOB'), 'received');
+
+      document.getElementById('p-kpis').innerHTML =
+        kpiCard('Received', Math.round(tRec).toLocaleString('en-US'), 'blue', 'ERA + EOB total') +
+        kpiCard('Completed', Math.round(tComp).toLocaleString('en-US'), 'green', 'Posted successfully') +
+        kpiCard('Pending', Math.round(tPend).toLocaleString('en-US'), 'red', 'Not yet posted') +
+        kpiCard('Amt Received', fA(tAmtR), 'purple', 'Total value in') +
+        kpiCard('Posted Amount', fA(tPost), 'teal', 'Total value posted') +
+        kpiCard('ERA / EOB', Math.round(eraRec) + ' / ' + Math.round(eobRec), 'orange', 'ERA vs EOB count');
+
+      const g = groupBy(data, r => pkey(r, PER.p));
+      const lb = Object.keys(g).sort();
+      const aArr = lb.map(k => sumF(g[k], 'amount_received'));
+      const psArr = lb.map(k => sumF(g[k], 'posted_amount'));
+      const pr = lb.length > 60 ? 0 : 3;
+
+      mkChart('p-c1', {
+        type: 'bar', data: {
+          labels: lb, datasets: [
+            { label: 'Amt Received', data: aArr, backgroundColor: 'rgba(5,150,105,0.88)', borderColor: '#059669', borderWidth: 1, borderRadius: 3 },
+            { label: 'Posted Amt', data: psArr, backgroundColor: 'rgba(37,99,235,0.88)', borderColor: '#3b82f6', borderWidth: 1, borderRadius: 3 },
+          ]
+        }, options: bOpts()
+      });
+
+      const eG = groupBy(data.filter(r => r.type === 'ERA'), r => pkey(r, PER.p));
+      const oG = groupBy(data.filter(r => r.type === 'EOB'), r => pkey(r, PER.p));
+      mkChart('p-c2', {
+        type: 'line', data: {
+          labels: lb, datasets: [
+            { label: 'ERA', data: lb.map(k => sumF(eG[k] || [], 'received')), borderColor: '#3b82f6', tension: .4, pointRadius: pr, borderWidth: 2 },
+            { label: 'EOB', data: lb.map(k => sumF(oG[k] || [], 'received')), borderColor: '#059669', tension: .4, pointRadius: pr, borderWidth: 2 },
+          ]
+        }, options: lOpts()
+      });
+
+      const pd = groupBy(data, r => r.provider);
+      const pl = Object.keys(pd).sort();
+      mkChart('p-c3', {
+        type: 'bar', data: {
+          labels: pl, datasets: [
+            { label: 'Amt Received', data: pl.map(p => sumF(pd[p], 'amount_received')), backgroundColor: '#059669', borderRadius: 4 },
+            { label: 'Posted Amt', data: pl.map(p => sumF(pd[p], 'posted_amount')), backgroundColor: '#2563eb', borderRadius: 4 },
+          ]
+        }, options: bOpts()
+      });
+
+      renderInsights('posting', computePostingInsights(data));
+
+      const tg = groupBy(data, r => r.provider + '||' + r.type);
+      let html = '';
+      for (const [key, rows] of Object.entries(tg).sort()) {
+        const [pv, t] = key.split('||');
+        if (!t || t.trim() === '') continue;
+        const bdg = t === 'ERA' ? '<span class="badge badge-era">ERA</span>' :
+          t === 'EOB' ? '<span class="badge badge-eob">EOB</span>' : t;
+        html += `<tr>
+      <td class="lbl">${pv}</td>
+      <td>${bdg}</td>
+      <td class="c-yellow">${Math.round(sumF(rows, 'prev_pending'))}</td>
+      <td class="c-blue">${Math.round(sumF(rows, 'received'))}</td>
+      <td class="c-green">${Math.round(sumF(rows, 'completed'))}</td>
+      <td class="c-red">${Math.round(sumF(rows, 'pending'))}</td>
+      <td class="c-green">${fA(sumF(rows, 'amount_received'))}</td>
+      <td class="c-blue">${fA(sumF(rows, 'posted_amount'))}</td>
+    </tr>`;
+      }
+      if (!html) {
+        html = `<tr><td colspan="8" class="no-data">No data for selected filter</td></tr>`;
+      } else {
+        html += `<tr class="total-row">
+      <td class="lbl" colspan="2">TOTAL</td>
+      <td class="c-yellow">${Math.round(sumF(data, 'prev_pending'))}</td>
+      <td class="c-blue">${Math.round(tRec)}</td>
+      <td class="c-green">${Math.round(tComp)}</td>
+      <td class="c-red">${Math.round(tPend)}</td>
+      <td class="c-green">${fA(tAmtR)}</td>
+      <td class="c-blue">${fA(tPost)}</td>
+    </tr>`;
+      }
+      document.getElementById('p-tbl').innerHTML = html;
+    }
+
+    // ═══════════════════════════════════════════
+    // REJECTIONS RENDER
+    // ═══════════════════════════════════════════
+    function renderRejections() {
+      const data = applyFilters(RAW.rejections, 'r');
+      const tRec = sumF(data, 'received'), tComp = sumF(data, 'completed'), tPend = sumF(data, 'pending');
+      const rate = tRec > 0 ? Math.round(tComp / tRec * 100) : 0;
+
+      document.getElementById('r-kpis').innerHTML =
+        kpiCard('Received', fK(tRec), 'red', 'Total rejections') +
+        kpiCard('Completed', fK(tComp), 'green', 'Resolved/fixed') +
+        kpiCard('Pending', fK(tPend), 'yellow', 'Still open') +
+        kpiCard('Resolution Rate', rate + '%', rate >= 80 ? 'green' : rate >= 50 ? 'yellow' : 'red', 'Clearance rate');
+
+      const g = groupBy(data, r => pkey(r, PER.r));
+      const lb = Object.keys(g).sort();
+      const rArr = lb.map(k => sumF(g[k], 'received')), cArr = lb.map(k => sumF(g[k], 'completed')), pArr = lb.map(k => sumF(g[k], 'pending'));
+      const pr = lb.length > 60 ? 0 : 3;
+
+      mkChart('r-c1', {
+        type: 'line', data: {
+          labels: lb, datasets: [
+            { label: 'Received', data: rArr, borderColor: '#f87171', tension: .4, pointRadius: pr, borderWidth: 2 },
+            { label: 'Completed', data: cArr, borderColor: '#059669', tension: .4, pointRadius: pr, borderWidth: 2 },
+          ]
+        }, options: lOpts()
+      });
+
+      const pd = groupBy(data, r => r.provider), pl = Object.keys(pd).sort();
+      mkChart('r-c2', {
+        type: 'bar', data: {
+          labels: pl, datasets: [
+            { label: 'Received', data: pl.map(p => sumF(pd[p], 'received')), backgroundColor: '#dc2626', borderRadius: 4 },
+            { label: 'Completed', data: pl.map(p => sumF(pd[p], 'completed')), backgroundColor: '#059669', borderRadius: 4 },
+            { label: 'Pending', data: pl.map(p => sumF(pd[p], 'pending')), backgroundColor: '#d97706', borderRadius: 4 },
+          ]
+        }, options: bOpts()
+      });
+
+      mkChart('r-c3', {
+        type: 'bar', data: {
+          labels: lb, datasets: [
+            { label: 'Completed', data: cArr, backgroundColor: 'rgba(5,150,105,0.88)', borderRadius: 2 },
+            { label: 'Pending', data: pArr, backgroundColor: 'rgba(217,119,6,0.88)', borderRadius: 2 },
+            { label: 'Received', data: rArr, type: 'line', borderColor: '#f87171', fill: false, tension: .4, pointRadius: pr, borderWidth: 2 },
+          ]
+        }, options: bOpts(true)
+      });
+
+      renderInsights('rejections', computeRejectionsInsights(data));
+
+      let html = '';
+      for (const [pv, rows] of Object.entries(pd).sort()) {
+        const rv = sumF(rows, 'received'), co = sumF(rows, 'completed'), pe = sumF(rows, 'pending'), rt = rv > 0 ? Math.round(co / rv * 100) : 0;
+        html += `<tr><td class="lbl">${pv}</td><td class="c-red">${Math.round(rv)}</td><td class="c-green">${Math.round(co)}</td><td class="c-yellow">${Math.round(pe)}</td>
+    <td><div class="rate-bar"><div class="rate-bar-track"><div class="rate-bar-fill" style="width:${rt}%;background:${rateColor(rt)}"></div></div><span style="font-size:12px;font-weight:600;color:${rateColor(rt)}">${rt}%</span></div></td></tr>`;
+      }
+      if (!html) html = `<tr><td colspan="5" class="no-data">No data for selected filter</td></tr>`;
+      else html += `<tr class="total-row"><td class="lbl">TOTAL</td><td class="c-red">${Math.round(tRec)}</td><td class="c-green">${Math.round(tComp)}</td><td class="c-yellow">${Math.round(tPend)}</td><td><span style="font-weight:700;color:${rateColor(rate)}">${rate}%</span></td></tr>`;
+      document.getElementById('r-tbl').innerHTML = html;
+    }
+
+    // ═══════════════════════════════════════════
+    // DENIALS RENDER
+    // ═══════════════════════════════════════════
+    function renderDenials() {
+      const data = applyFilters(RAW.denials, 'd');
+      const tot = sumF(data, 'count');
+      const pd = groupBy(data, r => r.provider);
+      const pl = Object.keys(pd).sort();
+
+      document.getElementById('d-kpis').innerHTML =
+        kpiCard('Total Denials', Math.round(tot).toString(), 'red', 'All providers') +
+        pl.map((p, i) => {
+          const c = Math.round(sumF(pd[p], 'count')), pct = tot > 0 ? Math.round(c / tot * 100) : 0;
+          return kpiCard(p, c.toString(), ['blue', 'green', 'purple', 'orange', 'yellow', 'teal'][i % 6], pct + '% of total');
+        }).join('');
+
+      const g = groupBy(data, r => pkey(r, PER.d));
+      const lb = Object.keys(g).sort();
+      const cArr = lb.map(k => sumF(g[k], 'count'));
+      const pr = lb.length > 60 ? 0 : 3;
+
+      mkChart('d-c1', {
+        type: 'bar', data: {
+          labels: lb, datasets: [
+            { label: 'Denials', data: cArr, backgroundColor: 'rgba(220,38,38,0.90)', borderColor: '#f87171', borderWidth: 1, borderRadius: 3 }
+          ]
+        }, options: { ...bOpts(), plugins: { legend: { display: false } } }
+      });
+
+      mkChart('d-c2', {
+        type: 'doughnut', data: {
+          labels: pl, datasets: [{
+            data: pl.map(p => Math.round(sumF(pd[p], 'count'))),
+            backgroundColor: COLORS, borderWidth: 3, borderColor: '#0f1629'
+          }]
+        }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+      });
+
+      const mDS = pl.map((p, i) => {
+        const pg = groupBy(pd[p], r => pkey(r, PER.d));
+        return { label: p, data: lb.map(k => sumF(pg[k] || [], 'count')), borderColor: COLORS[i % COLORS.length], tension: .4, fill: false, pointRadius: pr, borderWidth: 2 };
+      });
+      mkChart('d-c3', { type: 'line', data: { labels: lb, datasets: mDS }, options: lOpts() });
+
+      renderInsights('denials', computeDenialsInsights(data));
+
+      let html = '';
+      for (const p of pl) {
+        const c = Math.round(sumF(pd[p], 'count')), pct = tot > 0 ? Math.round(c / tot * 100) : 0;
+        html += `<tr><td class="lbl">${p}</td><td class="c-red">${c}</td><td>${pct}%</td>
+    <td><div class="rate-bar-track" style="max-width:200px"><div class="rate-bar-fill" style="width:${pct}%;background:var(--red)"></div></div></td></tr>`;
+      }
+      if (!html) html = `<tr><td colspan="4" class="no-data">No data for selected filter</td></tr>`;
+      else html += `<tr class="total-row"><td class="lbl">TOTAL</td><td class="c-red">${Math.round(tot)}</td><td>100%</td><td></td></tr>`;
+      document.getElementById('d-tbl').innerHTML = html;
+    }
+
+    // ═══════════════════════════════════════════
+    // INSIGHTS ENGINE
+    // ═══════════════════════════════════════════
+    const INS_COLLAPSED = { billing: false, posting: false, rejections: false, denials: false };
+
+    function toggleInsights(section) {
+      INS_COLLAPSED[section] = !INS_COLLAPSED[section];
+      const body = document.getElementById('ins-body-' + section);
+      const icon = document.getElementById('ins-toggle-' + section);
+      body.classList.toggle('hidden', INS_COLLAPSED[section]);
+      icon.classList.toggle('open', !INS_COLLAPSED[section]);
+    }
+
+    function insCard(type, icon, title, desc) {
+      return `<div class="insight-card ins-${type}">
+    <div class="ins-icon">${icon}</div>
+    <div class="ins-body"><div class="ins-title">${title}</div><div class="ins-desc">${desc}</div></div>
+  </div>`;
+    }
+
+    function pct(v, t) { return t > 0 ? Math.round(v / t * 100) : 0; }
+    function fmt(v) { return Math.round(v).toLocaleString('en-US'); }
+
+    // ─────────────────────────────────────────────────────────────
+    // IMPROVED BILLING INSIGHTS
+    // ─────────────────────────────────────────────────────────────
+    function computeBillingInsights(data) {
+      if (!data || !data.length) return [];
+      const cards = [];
+
+      const tRec = sumF(data, 'received');
+      const tComp = sumF(data, 'completed');
+      const tPend = lastEntryValue(data, 'pending');
+      const tPrev = lastEntryValue(data, 'prev_pending');
+      const tTotal = tPrev + tRec;
+      const rate = tTotal > 0 ? Math.round(tComp / tTotal * 100) : 0;
+
+      // Completion Rate (Benchmark: >85% good, >95% excellent)
+      if (rate >= 95) {
+        cards.push(insCard('good', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trophy-icon lucide-trophy"><path d="M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978"/><path d="M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978"/><path d="M18 9h1.5a1 1 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z"/><path d="M6 9H4.5a1 1 0 0 1 0-5H6"/></svg>', 'Outstanding Completion Rate', `Completion rate is <span class="ins-value">${rate}%</span> — excellent performance. Keep current processes.`));
+      } else if (rate >= 85) {
+        cards.push(insCard('info', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>', 'Strong Completion Rate', `<span class="ins-value">${rate}%</span> of claims completed. Solid performance, room to reach 95%.`));
+      } else if (rate >= 70) {
+        cards.push(insCard('warn', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert-icon lucide-triangle-alert"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>', 'Completion Rate Needs Improvement', `Only <span class="ins-value">${rate}%</span> completed. Focus on reducing pending backlog.`));
+      } else {
+        cards.push(insCard('bad', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-down-icon lucide-thumbs-down"><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/><path d="M17 14V2"/></svg>', 'Critical Completion Rate', `Completion rate is low at <span class="ins-value">${rate}%</span>. Immediate action required to clear backlog.`));
+      }
+
+      // Pending Load
+      const pendPct = tTotal > 0 ? Math.round(tPend / tTotal * 100) : 0;
+      if (pendPct > 40) {
+        cards.push(insCard('bad', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-down-icon lucide-trending-down"><path d="M16 17h6v-6"/><path d="m22 17-8.5-8.5-5 5L2 7"/></svg>', 'High Pending Backlog', `<span class="ins-value">${Math.round(tPend)}</span> claims pending (<span class="ins-value">${pendPct}%</span>). This is accumulating risk.`));
+      } else if (pendPct > 25) {
+        cards.push(insCard('warn', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-receipt-icon lucide-receipt"><path d="M12 17V7"/><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8"/><path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z"/></svg>', 'Moderate Pending Load', `<span class="ins-value">${Math.round(tPend)}</span> pending (<span class="ins-value">${pendPct}%</span>). Monitor closely.`));
+      } else if (tTotal > 0) {
+        cards.push(insCard('good', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chart-bar-decreasing-icon lucide-chart-bar-decreasing"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 11h8"/><path d="M7 16h3"/><path d="M7 6h12"/></svg>', 'Well-Managed Pending', `Only <span class="ins-value">${pendPct}%</span> pending — backlog is under control.`));
+      }
+
+      // Provider Performance
+      const pd = groupBy(data, r => r.provider);
+      const provRates = Object.entries(pd).map(([p, rows]) => {
+        const rv = sumF(rows, 'received');
+        const co = sumF(rows, 'completed');
+        const pp = lastEntryValue(rows, 'prev_pending');
+        const tot = pp + rv;
+        return { p, rate: tot > 0 ? Math.round(co / tot * 100) : 0, completed: co };
+      }).filter(x => x.completed > 0 || x.rate > 0);
+
+      if (provRates.length > 1) {
+        const best = provRates.reduce((a, b) => a.rate > b.rate ? a : b);
+        const worst = provRates.reduce((a, b) => a.rate < b.rate ? a : b);
+        cards.push(insCard('good', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-medal-icon lucide-medal"><path d="M7.21 15 2.66 7.14a2 2 0 0 1 .13-2.2L4.4 2.8A2 2 0 0 1 6 2h12a2 2 0 0 1 1.6.8l1.6 2.14a2 2 0 0 1 .14 2.2L16.79 15"/><path d="M11 12 5.12 2.2"/><path d="m13 12 5.88-9.8"/><path d="M8 7h8"/><circle cx="12" cy="17" r="5"/><path d="M12 18v-2h-.5"/></svg>', 'Top Performer', `<span class="ins-value">${best.p}</span> leads with <span class="ins-value">${best.rate}%</span> completion.`));
+        if (worst.rate < 70 && worst.p !== best.p) {
+          cards.push(insCard('warn', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chart-column-decreasing-icon lucide-chart-column-decreasing"><path d="M13 17V9"/><path d="M18 17v-3"/><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M8 17V5"/></svg>', 'Provider Needing Support', `<span class="ins-value">${worst.p}</span> has lowest completion at <span class="ins-value">${worst.rate}%</span>. Review processes.`));
+        }
+      }
+
+      // Trend (if multiple dates)
+      const g = groupBy(data, r => r.date);
+      const dates = Object.keys(g).sort();
+      if (dates.length >= 2) {
+        const lastRec = sumF(g[dates[dates.length - 1]], 'received');
+        const prevRec = sumF(g[dates[dates.length - 2]], 'received');
+        if (prevRec > 0) {
+          const change = Math.round(((lastRec - prevRec) / prevRec) * 100);
+          if (change > 30) cards.push(insCard('info', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-down-icon lucide-trending-down"><path d="M16 17h6v-6"/><path d="m22 17-8.5-8.5-5 5L2 7"/></svg>', 'Sharp Increase in Received Claims', `New claims rose <span class="ins-value">+${change}%</span> — prepare resources.`));
+          else if (change < -25) cards.push(insCard('warn', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chart-bar-decreasing-icon lucide-chart-bar-decreasing"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 11h8"/><path d="M7 16h3"/><path d="M7 6h12"/></svg>', 'Drop in Received Claims', `Received claims fell <span class="ins-value">${change}%</span>. Investigate volume.`));
+        }
+      }
+
+      if (tRec === 0 && tTotal > 0) {
+        cards.push(insCard('warn', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert-icon lucide-triangle-alert"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>', 'No New Claims', `All activity is from prior pending. Focus on clearing backlog.`));
+      }
+
+      return cards;
+    }
+
+    function computePostingInsights(data) {
+      if (!data || !data.length) return [];
+      const cards = [];
+
+      const tRec = sumF(data, 'received');
+      const tComp = sumF(data, 'completed');
+      const tPend = sumF(data, 'pending');
+      const tAmtR = sumF(data, 'amount_received');
+      const tPost = sumF(data, 'posted_amount');
+      const compRate = tRec > 0 ? Math.round(tComp / tRec * 100) : 0;
+      const postPct = tAmtR > 0 ? Math.round(tPost / tAmtR * 100) : 0;
+
+      // Posting Completion Rate
+      if (compRate >= 95) {
+        cards.push(insCard('good', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>', 'Excellent Posting Rate', `<span class="ins-value">${compRate}%</span> of received payments posted — outstanding.`));
+      } else if (compRate >= 80) {
+        cards.push(insCard('info', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-receipt-icon lucide-receipt"><path d="M12 17V7"/><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8"/><path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z"/></svg>', 'Good Posting Performance', `<span class="ins-value">${compRate}%</span> posting completion. On track.`));
+      } else {
+        cards.push(insCard('warn', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert-icon lucide-triangle-alert"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>', 'Posting Backlog Building', `Only <span class="ins-value">${compRate}%</span> posted. Review staffing or process.`));
+      }
+
+      // Amount Posted
+      if (tAmtR > 0) {
+        if (postPct >= 95) {
+          cards.push(insCard('good', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-wallet-cards-icon lucide-wallet-cards"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2"/><path d="M3 11h3c.8 0 1.6.3 2.1.9l1.1.9c1.6 1.6 4.1 1.6 5.7 0l1.1-.9c.5-.5 1.3-.9 2.1-.9H21"/></svg>', 'Amount Nearly Fully Posted', `<span class="ins-value">${postPct}%</span> of received amount posted.`));
+        } else if (postPct < 75) {
+          cards.push(insCard('bad', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-down-icon lucide-trending-down"><path d="M16 17h6v-6"/><path d="m22 17-8.5-8.5-5 5L2 7"/></svg>', 'Significant Unposted Amount', `Only <span class="ins-value">${postPct}%</span> posted. Unposted value: <span class="ins-value">₹${Math.round(tAmtR - tPost).toLocaleString('en-IN')}</span>.`));
+        } else {
+          cards.push(insCard('warn', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert-icon lucide-triangle-alert"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>', 'Partial Posting', `<span class="ins-value">${postPct}%</span> of amount posted.`));
+        }
+      }
+
+      // ERA vs EOB (if both exist)
+      const eraData = data.filter(r => r.type === 'ERA');
+      const eobData = data.filter(r => r.type === 'EOB');
+      if (eraData.length && eobData.length) {
+        const eraComp = eraData.length ? Math.round(sumF(eraData, 'completed') / sumF(eraData, 'received') * 100) : 0;
+        const eobComp = eobData.length ? Math.round(sumF(eobData, 'completed') / sumF(eobData, 'received') * 100) : 0;
+        if (Math.abs(eraComp - eobComp) > 15) {
+          const better = eraComp > eobComp ? 'ERA' : 'EOB';
+          cards.push(insCard('info', '⚖️', `${better} Performing Better`, `${better} completion: <span class="ins-value">${Math.max(eraComp, eobComp)}%</span> vs ${Math.min(eraComp, eobComp)}%.`));
+        }
+      }
+
+      if (tPend > tComp * 1.5 && tRec > 0) {
+        cards.push(insCard('bad', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-down-icon lucide-trending-down"><path d="M16 17h6v-6"/><path d="m22 17-8.5-8.5-5 5L2 7"/></svg>', 'Growing Posting Backlog', `Pending (${Math.round(tPend)}) significantly exceeds completed.`));
+      }
+
+      return cards;
+    }
+
+    function computeRejectionsInsights(data) {
+      if (!data || !data.length) return [];
+      const cards = [];
+
+      const tRec = sumF(data, 'received');
+      const tComp = sumF(data, 'completed');
+      const tPend = sumF(data, 'pending');
+      const rate = tRec > 0 ? Math.round(tComp / tRec * 100) : 0;
+
+      if (rate >= 90) {
+        cards.push(insCard('good', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>', 'Excellent Resolution Rate', `<span class="ins-value">${rate}%</span> of rejections resolved — very strong performance.`));
+      } else if (rate >= 75) {
+        cards.push(insCard('info', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-banknote-x-icon lucide-banknote-x"><path d="M13 18H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5"/><path d="m17 17 5 5"/><path d="M18 12h.01"/><path d="m22 17-5 5"/><path d="M6 12h.01"/><circle cx="12" cy="12" r="2"/></svg>', 'Good Resolution Rate', `<span class="ins-value">${rate}%</span> resolved.`));
+      } else if (rate >= 50) {
+        cards.push(insCard('warn', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert-icon lucide-triangle-alert"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>', 'Resolution Rate Below Target', `Only <span class="ins-value">${rate}%</span> resolved. Improve follow-up process.`));
+      } else {
+        cards.push(insCard('bad', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-down-icon lucide-thumbs-down"><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/><path d="M17 14V2"/></svg>', 'Poor Resolution Rate', `<span class="ins-value">${rate}%</span> resolved — urgent improvement needed.`));
+      }
+
+      const pendPct = tRec > 0 ? Math.round(tPend / tRec * 100) : 0;
+      if (pendPct > 50) {
+        cards.push(insCard('bad', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-layers-plus-icon lucide-layers-plus"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 .83.18 2 2 0 0 0 .83-.18l8.58-3.9a1 1 0 0 0 0-1.831z"/><path d="M16 17h6"/><path d="M19 14v6"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 .825.178"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l2.116-.962"/></svg>', 'Large Unresolved Backlog', `<span class="ins-value">${pendPct}%</span> of rejections still open.`));
+      } else if (pendPct <= 20) {
+        cards.push(insCard('good', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>', 'Backlog Well Controlled', `Only <span class="ins-value">${pendPct}%</span> unresolved.`));
+      }
+
+      // Provider level
+      const pd = groupBy(data, r => r.provider);
+      const provData = Object.entries(pd).map(([p, rows]) => ({
+        p,
+        received: sumF(rows, 'received'),
+        pending: sumF(rows, 'pending'),
+        rate: sumF(rows, 'received') > 0 ? Math.round(sumF(rows, 'completed') / sumF(rows, 'received') * 100) : 0
+      })).filter(x => x.received > 0);
+
+      if (provData.length > 1) {
+        const worst = provData.reduce((a, b) => a.pending > b.pending ? a : b);
+        if (worst.pending > 0) {
+          cards.push(insCard('warn', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chart-column-decreasing-icon lucide-chart-column-decreasing"><path d="M13 17V9"/><path d="M18 17v-3"/><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M8 17V5"/></svg>', 'Highest Open Rejections', `<span class="ins-value">${worst.p}</span> has <span class="ins-value">${Math.round(worst.pending)}</span> unresolved.`));
+        }
+      }
+
+      return cards;
+    }
+
+    function computeDenialsInsights(data) {
+      if (!data || !data.length) return [];
+      const cards = [];
+      const tCount = sumF(data, 'count');
+      const pd = groupBy(data, r => r.provider);
+      const provCounts = Object.entries(pd).map(([p, rows]) => ({
+        p,
+        count: sumF(rows, 'count')
+      })).sort((a, b) => b.count - a.count);
+
+      if (tCount === 0) {
+        cards.push(insCard('good', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>', 'Zero Denials', 'Excellent payer management — no denials recorded.'));
+      } else if (tCount <= 15) {
+        cards.push(insCard('good', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>', 'Low Denial Volume', `Only <span class="ins-value">${Math.round(tCount)}</span> denials — well controlled.`));
+      } else {
+        cards.push(insCard('info', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud-sync-icon lucide-cloud-sync"><path d="m17 18-1.535 1.605a5 5 0 0 1-8-1.5"/><path d="M17 22v-4h-4"/><path d="M20.996 15.251A4.5 4.5 0 0 0 17.495 8h-1.79a7 7 0 1 0-12.709 5.607"/><path d="M7 10v4h4"/><path d="m7 14 1.535-1.605a5 5 0 0 1 8 1.5"/></svg>', 'Denial Summary', `<span class="ins-value">${Math.round(tCount)}</span> total denials this period.`));
+      }
+
+      if (provCounts.length > 0 && tCount > 0) {
+        const worst = provCounts[0];
+        const worstPct = Math.round(worst.count / tCount * 100);
+        if (worstPct >= 40) {
+          cards.push(insCard('bad', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-down-icon lucide-thumbs-down"><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/><path d="M17 14V2"/></svg>', 'High Denial Concentration', `<span class="ins-value">${worst.p}</span> accounts for <span class="ins-value">${worstPct}%</span> of all denials.`));
+        } else if (worstPct >= 25) {
+          cards.push(insCard('warn', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-receipt-icon lucide-receipt"><path d="M12 17V7"/><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8"/><path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z"/></svg>', 'Top Denial Provider', `<span class="ins-value">${worst.p}</span> has highest denials: <span class="ins-value">${Math.round(worst.count)}</span> (${worstPct}%).`));
+        }
+      }
+
+      // Trend detection
+      const g = groupBy(data, r => r.date);
+      const dates = Object.keys(g).sort().slice(-3);
+      if (dates.length === 3) {
+        const recent = dates.map(d => sumF(g[d], 'count'));
+        if (recent[0] < recent[1] && recent[1] < recent[2]) {
+          cards.push(insCard('bad', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-down-icon lucide-trending-down"><path d="M16 17h6v-6"/><path d="m22 17-8.5-8.5-5 5L2 7"/></svg>', 'Rising Denial Trend', `Denials increasing over last 3 periods.`));
+        } else if (recent[0] > recent[1] && recent[1] > recent[2]) {
+          cards.push(insCard('good', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chart-bar-decreasing-icon lucide-chart-bar-decreasing"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 11h8"/><path d="M7 16h3"/><path d="M7 6h12"/></svg>', 'Declining Denial Trend', `Positive — denials decreasing.`));
+        }
+      }
+
+      return cards;
+    }
+
+    function renderInsights(section, cards) {
+      const body = document.getElementById('ins-body-' + section);
+      const count = document.getElementById('ins-count-' + section);
+      if (!body || !count) return;
+      count.textContent = cards.length;
+      count.style.background = cards.some(c => c.includes('ins-bad')) ? 'var(--red)'
+        : cards.some(c => c.includes('ins-warn')) ? 'var(--yellow)' : 'var(--blue)';
+      body.innerHTML = cards.length
+        ? cards.join('')
+        : `<div class="insight-card ins-info"><div class="ins-icon">ℹ️</div><div class="ins-body"><div class="ins-title">No Data</div><div class="ins-desc">No data available for the current filter selection.</div></div></div>`;
+    }
+
+    // ═══════════════════════════════════════════
+    // INIT — loading overlay stays visible until restore completes
+    // ═══════════════════════════════════════════
+    (function init() {
+      lucide.createIcons();
+      document.getElementById('nav-upload').classList.add('active');
+      tryRestoreFromStorage();
+    })();
+  </script>
+
+  <!-- ━━━━━━━ PIN MODAL ━━━━━━━ -->
+  <div id="pin-overlay">
+    <div id="pin-box">
+      <h3>
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          class="lucide lucide-shield-check">
+          <path
+            d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+        Restricted Area
+      </h3>
+      <div class="pin-sub">Daily Billing & Posting Data Analysis</div>
+      <p style="margin-bottom: 32px; color: var(--text2); font-size: 14px;">Enter the password to access<br><b>Secure Data Entry</b></p>
+      <form onsubmit="checkPin(); return false;" autocomplete="on">
+        <input id="pin-input" type="password" name="password" placeholder="Enter password"
+          autocomplete="current-password" />
+        <div id="pin-error"></div>
+        <button id="pin-submit" type="submit">Unlock</button>
+        <button id="pin-cancel" type="button" onclick="closePin()">Cancel</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━ CHANGE PASSWORD MODAL ━━━━━━━ -->
+  <div id="chgpwd-overlay">
+    <div id="chgpwd-box">
+      <h3>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          class="lucide lucide-lock">
+          <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+        Change Paste Password
+      </h3>
+      <p class="chgpwd-sub">Enter the current password and choose a new one.</p>
+      <form onsubmit="chgpwdSubmit(); return false;" autocomplete="on">
+        <div class="chgpwd-label">Current Password</div>
+        <input id="chgpwd-current" class="chgpwd-input" type="password" name="current_password"
+          placeholder="Enter current password" autocomplete="current-password" />
+        <div class="chgpwd-label">New Password</div>
+        <input id="chgpwd-newpin" class="chgpwd-input" type="password" name="new_password"
+          placeholder="Enter new password (min 6 chars)" autocomplete="new-password" />
+        <div class="chgpwd-label">Confirm New Password</div>
+        <input id="chgpwd-confirm" class="chgpwd-input" type="password" name="confirm_password"
+          placeholder="Re-enter new password" autocomplete="new-password" />
+
+        <div class="chgpwd-error" id="chgpwd-err"></div>
+        <div id="chgpwd-success-msg" class="chgpwd-success" style="display:none;">
+          ✅ Password changed successfully!
+        </div>
+
+        <div class="chgpwd-actions">
+          <button type="button" class="chgpwd-btn-cancel" onclick="closeChangePwd()">Cancel</button>
+          <button type="submit" class="chgpwd-btn-primary" id="chgpwd-btn">Change Password</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━ EXPORT MODAL ━━━━━━━ -->
+  <div id="export-overlay">
+    <div id="export-box">
+      <h3>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          class="lucide lucide-download">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" x2="12" y1="15" y2="3" />
+        </svg>
+        Export Report
+      </h3>
+      <div class="exp-sub">Choose what to export and the format you need.</div>
+      <div class="exp-section-label">Scope</div>
+      <div class="exp-scope-btns">
+        <div class="exp-scope-btn selected" id="exp-scope-current" onclick="selectExpScope('current')">
+          <div class="esb-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              class="lucide lucide-file-text">
+              <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+              <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+              <path d="M10 9H8" />
+              <path d="M16 13H8" />
+              <path d="M16 17H8" />
+            </svg>
+          </div>
+          <div class="esb-label">Current Section</div>
+          <div class="esb-sub" id="exp-scope-current-sub">Active report only</div>
+        </div>
+        <div class="exp-scope-btn" id="exp-scope-all" onclick="selectExpScope('all')">
+          <div class="esb-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              class="lucide lucide-package-icon lucide-package">
+              <path
+                d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" />
+              <path d="M12 22V12" />
+              <polyline points="3.29 7 12 12 20.71 7" />
+              <path d="m7.5 4.27 9 5.15" />
+            </svg></div>
+          <div class="esb-label">All Sections</div>
+          <div class="esb-sub">Billing, Posting, Rejections, Denials</div>
+        </div>
+      </div>
+      <div class="exp-section-label">Format</div>
+      <div class="exp-format-btns">
+        <div class="exp-format-btn selected" id="exp-fmt-excel" onclick="selectExpFmt('excel')">
+          <div class="efb-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              class="lucide lucide-cloud-sync-icon lucide-cloud-sync">
+              <path d="m17 18-1.535 1.605a5 5 0 0 1-8-1.5" />
+              <path d="M17 22v-4h-4" />
+              <path d="M20.996 15.251A4.5 4.5 0 0 0 17.495 8h-1.79a7 7 0 1 0-12.709 5.607" />
+              <path d="M7 10v4h4" />
+              <path d="m7 14 1.535-1.605a5 5 0 0 1 8 1.5" />
+            </svg></div>
+          <div class="efb-label">Excel (.xlsx)</div>
+          <div class="efb-desc">Separate sheet per section<br>with all table data</div>
+        </div>
+        <div class="exp-format-btn" id="exp-fmt-csv" onclick="selectExpFmt('csv')">
+          <div class="efb-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              class="lucide lucide-sheet-icon lucide-sheet">
+              <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+              <line x1="3" x2="21" y1="9" y2="9" />
+              <line x1="3" x2="21" y1="15" y2="15" />
+              <line x1="9" x2="9" y1="9" y2="21" />
+              <line x1="15" x2="15" y1="9" y2="21" />
+            </svg></div>
+          <div class="efb-label">CSV (.csv)</div>
+          <div class="efb-desc">Plain text, opens in Excel<br>or any spreadsheet app</div>
+        </div>
+        <div class="exp-format-btn" id="exp-fmt-pdf" onclick="selectExpFmt('pdf')">
+          <div class="efb-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              class="lucide lucide-file-text-icon lucide-file-text">
+              <path
+                d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
+              <path d="M14 2v5a1 1 0 0 0 1 1h5" />
+              <path d="M10 9H8" />
+              <path d="M16 13H8" />
+              <path d="M16 17H8" />
+            </svg></div>
+          <div class="efb-label">PDF (Print)</div>
+          <div class="efb-desc">Formatted for printing<br>or saving as PDF</div>
+        </div>
+      </div>
+      <div class="exp-actions">
+        <button class="exp-btn-cancel" onclick="closeExport()">Cancel</button>
+        <button class="exp-btn-go" id="exp-go-btn" onclick="doExport()">⬇ Download Export</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━ DEVELOPER FOOTER ━━━━━━━ -->
+  <div id="dev-footer">
+    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-terminal"
+      style="color:var(--blue)">
+      <polyline points="4 17 10 11 4 5" />
+      <line x1="12" x2="20" y1="19" y2="19" />
+    </svg>
+    Developed By —
+    <span class="dev-name">Bhavik Vaishnani</span>
+    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cpu"
+      style="color:var(--purple)">
+      <rect width="16" height="16" x="4" y="4" rx="2" />
+      <rect width="6" height="6" x="9" y="9" rx="1" />
+      <path d="M15 2v2" />
+      <path d="M15 20v2" />
+      <path d="M2 15h2" />
+      <path d="M2 9h2" />
+      <path d="M20 15h2" />
+      <path d="M20 9h2" />
+      <path d="M9 2v2" />
+      <path d="M9 20v2" />
+    </svg>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════
+    // EXPORT SYSTEM
+    // ═══════════════════════════════════════════
+    let expSection = 'billing', expScope = 'current', expFmt = 'excel';
+
+    function openExport(section) {
+      expSection = section;
+      const names = { billing: 'Billing Summary', posting: 'Payment Posting', rejections: 'Rejection Summary', denials: 'Daily Denial Summary' };
+      document.getElementById('exp-scope-current-sub').textContent = names[section] || section;
+      selectExpScope('current');
+      selectExpFmt('excel');
+      document.getElementById('export-overlay').classList.add('active');
+    }
+    function closeExport() { document.getElementById('export-overlay').classList.remove('active'); }
+    function selectExpScope(s) {
+      expScope = s;
+      document.querySelectorAll('.exp-scope-btn').forEach(b => b.classList.remove('selected'));
+      document.getElementById('exp-scope-' + s).classList.add('selected');
+    }
+    function selectExpFmt(f) {
+      expFmt = f;
+      document.querySelectorAll('.exp-format-btn').forEach(b => b.classList.remove('selected'));
+      document.getElementById('exp-fmt-' + f).classList.add('selected');
+      document.getElementById('exp-go-btn').textContent = f === 'pdf' ? '🖨 Print / Save as PDF' : '⬇ Download Export';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('export-overlay').addEventListener('click', e => {
+        if (e.target === document.getElementById('export-overlay')) closeExport();
+      });
+    });
+
+    function tableToRows(tbodyId, theadId) {
+      const thead = document.getElementById(theadId);
+      const tbody = document.getElementById(tbodyId);
+      if (!thead || !tbody) return [];
+      const headers = [...thead.querySelectorAll('th')].map(th => th.innerText.trim());
+      const rows = [[...headers]];
+      tbody.querySelectorAll('tr').forEach(tr => {
+        const cells = [...tr.querySelectorAll('td')].map(td => td.innerText.trim());
+        if (cells.length) rows.push(cells);
+      });
+      return rows;
+    }
+    function kpiToRows(kpiGridId) {
+      const grid = document.getElementById(kpiGridId);
+      if (!grid) return [];
+      const rows = [['KPI', 'Value', 'Note']];
+      grid.querySelectorAll('.kpi-card').forEach(card => {
+        rows.push([
+          card.querySelector('.kpi-label')?.innerText.trim() || '',
+          card.querySelector('.kpi-value')?.innerText.trim() || '',
+          card.querySelector('.kpi-sub')?.innerText.trim() || ''
+        ]);
+      });
+      return rows;
+    }
+
+    const SECTION_META = {
+      billing: { name: 'Billing Summary', kpi: 'b-kpis', tbody: 'b-tbl', thead: 'b-thead' },
+      posting: { name: 'Payment Posting', kpi: 'p-kpis', tbody: 'p-tbl', thead: 'p-thead' },
+      rejections: { name: 'Rejection Summary', kpi: 'r-kpis', tbody: 'r-tbl', thead: 'r-thead' },
+      denials: { name: 'Denial Summary', kpi: 'd-kpis', tbody: 'd-tbl', thead: 'd-thead' },
+    };
+
+    (function tagTheads() {
+      const map = { 'b-tbl': 'b-thead', 'p-tbl': 'p-thead', 'r-tbl': 'r-thead', 'd-tbl': 'd-thead' };
+      for (const [tbodyId, theadId] of Object.entries(map)) {
+        const tbody = document.getElementById(tbodyId);
+        if (tbody) { const thead = tbody.closest('table')?.querySelector('thead'); if (thead && !thead.id) thead.id = theadId; }
+      }
+    })();
+
+    function rowsToCSV(rows) {
+      return rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+    }
+    function downloadCSV(sections) {
+      const parts = [];
+      for (const key of sections) {
+        const m = SECTION_META[key];
+        parts.push(`"=== ${m.name} — KPIs ==="`, rowsToCSV(kpiToRows(m.kpi)), '', `"=== ${m.name} — Table ==="`, rowsToCSV(tableToRows(m.tbody, m.thead)), '');
+      }
+      triggerDownload(new Blob([parts.join('\r\n')], { type: 'text/csv;charset=utf-8;' }), 'MedBill_Report_' + datestamp() + '.csv');
+    }
+
+    function downloadXLSX(sections) {
+      const sheets = sections.map(key => {
+        const m = SECTION_META[key];
+        return { name: m.name.substring(0, 31), rows: [['=== KPIs ==='], ...kpiToRows(m.kpi), [], ...['=== Detail Table ==='], ...tableToRows(m.tbody, m.thead)] };
+      });
+      buildAndDownloadXLSX(sheets, 'MedBill_Report_' + datestamp() + '.xlsx');
+    }
+
+    function buildAndDownloadXLSX(sheets, filename) {
+      const sheetNames = sheets.map(s => s.name);
+      const ssTable = [], ssIndex = {};
+      function getSSIdx(val) { const k = String(val); if (ssIndex[k] === undefined) { ssIndex[k] = ssTable.length; ssTable.push(k); } return ssIndex[k]; }
+      const wsXMLArr = sheets.map(s => {
+        let xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
+        s.rows.forEach((row, ri) => {
+          xml += `<row r="${ri + 1}">`;
+          row.forEach((cell, ci) => {
+            const ref = `${colLetter(ci)}${ri + 1}`, v = String(cell);
+            const num = parseFloat(v.replace(/[$,%]/g, ''));
+            if (!isNaN(num) && v.trim() !== '') xml += `<c r="${ref}"><v>${num}</v></c>`;
+            else xml += `<c r="${ref}" t="s"><v>${getSSIdx(v)}</v></c>`;
+          });
+          xml += '</row>';
+        });
+        return xml + '</sheetData></worksheet>';
+      });
+      const ssXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${ssTable.length}" uniqueCount="${ssTable.length}">${ssTable.map(s => `<si><t xml:space="preserve">${xmlEsc(s)}</t></si>`).join('')}</sst>`;
+      const wbXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheetNames.map((n, i) => `<sheet name="${xmlEsc(n)}" sheetId="${i + 1}" r:id="rId${i + 2}"/>`).join('')}</sheets></workbook>`;
+      const wbRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>${sheetNames.map((_, i) => `<Relationship Id="rId${i + 2}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}</Relationships>`;
+      const appRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
+      const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>${sheetNames.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`;
+      const files = { '[Content_Types].xml': contentTypes, '_rels/.rels': appRels, 'xl/workbook.xml': wbXML, 'xl/_rels/workbook.xml.rels': wbRels, 'xl/sharedStrings.xml': ssXML };
+      wsXMLArr.forEach((xml, i) => { files[`xl/worksheets/sheet${i + 1}.xml`] = xml; });
+      triggerDownload(new Blob([buildZip(files)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), filename);
+    }
+
+    function colLetter(n) { let s = ''; n++; while (n > 0) { n--; s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26); } return s; }
+    function xmlEsc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+    function datestamp() { return new Date().toISOString().slice(0, 10).replace(/-/g, ''); }
+
+    function buildZip(files) {
+      const enc = new TextEncoder(), entries = [], central = []; let offset = 0;
+      for (const [name, content] of Object.entries(files)) {
+        const nb = enc.encode(name), db = enc.encode(content), crc = crc32(db);
+        const local = new Uint8Array(30 + nb.length + db.length), dv = new DataView(local.buffer);
+        dv.setUint32(0, 0x04034b50, true); dv.setUint16(4, 20, true); dv.setUint16(6, 0, true); dv.setUint16(8, 0, true);
+        dv.setUint16(10, 0, true); dv.setUint16(12, 0, true); dv.setUint32(14, crc, true);
+        dv.setUint32(18, db.length, true); dv.setUint32(22, db.length, true); dv.setUint16(26, nb.length, true); dv.setUint16(28, 0, true);
+        local.set(nb, 30); local.set(db, 30 + nb.length);
+        const cen = new Uint8Array(46 + nb.length), cv = new DataView(cen.buffer);
+        cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true);
+        [8, 10, 12, 14].forEach(o => cv.setUint16(o, 0, true));
+        cv.setUint32(16, crc, true); cv.setUint32(20, db.length, true); cv.setUint32(24, db.length, true);
+        cv.setUint16(28, nb.length, true);[30, 32, 34, 36].forEach(o => cv.setUint16(o, 0, true));
+        cv.setUint32(38, 0, true); cv.setUint32(42, offset, true); cen.set(nb, 46);
+        entries.push(local); central.push(cen); offset += local.length;
+      }
+      const cd = concat(central), eocd = new Uint8Array(22), ed = new DataView(eocd.buffer);
+      ed.setUint32(0, 0x06054b50, true); ed.setUint16(4, 0, true); ed.setUint16(6, 0, true);
+      ed.setUint16(8, entries.length, true); ed.setUint16(10, entries.length, true);
+      ed.setUint32(12, cd.length, true); ed.setUint32(16, offset, true); ed.setUint16(20, 0, true);
+      return concat([...entries, cd, eocd]);
+    }
+    function concat(arrays) { const out = new Uint8Array(arrays.reduce((s, a) => s + a.length, 0)); let pos = 0; for (const a of arrays) { out.set(a, pos); pos += a.length; } return out; }
+    function crc32(data) { let c = 0xFFFFFFFF; for (let i = 0; i < data.length; i++) { c ^= data[i]; for (let j = 0; j < 8; j++)c = (c >>> 1) ^ (c & 1 ? 0xEDB88320 : 0); } return (c ^ 0xFFFFFFFF) >>> 0; }
+    function triggerDownload(blob, filename) { const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(() => URL.revokeObjectURL(url), 1000); }
+
+    function doPrintExport(sections) {
+      const allSecs = ['billing', 'posting', 'rejections', 'denials'];
+      const styleId = 'print-temp-style';
+      let st = document.getElementById(styleId);
+      if (!st) { st = document.createElement('style'); st.id = styleId; document.head.appendChild(st); }
+      st.textContent = allSecs.filter(k => !sections.includes(k)).map(k => `#sec-${k}{display:none!important}`).join(' ');
+      window.print();
+      setTimeout(() => { st.textContent = ''; }, 2000);
+    }
+
+    function doExport() {
+      const sections = expScope === 'all' ? ['billing', 'posting', 'rejections', 'denials'] : [expSection];
+      if (expScope === 'all') {
+        if (RAW.billing.length) renderBilling();
+        if (RAW.posting.length) renderPosting();
+        if (RAW.rejections.length) renderRejections();
+        if (RAW.denials.length) renderDenials();
+      }
+      closeExport();
+      if (expFmt === 'pdf') setTimeout(() => doPrintExport(sections), 200);
+      else if (expFmt === 'csv') downloadCSV(sections);
+      else downloadXLSX(sections);
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       PENDING REASONS SYSTEM
+       Stores per-provider reason notes; persists via localStorage + server
+    ══════════════════════════════════════════════════════════════ */
+    let PENDING_REASONS = {};
+
+    /** Robust lookup for pending reasons (handles slight name mismatches like spaces) */
+    function getReason(pv) {
+      if (!pv) return '';
+      if (PENDING_REASONS[pv]) return PENDING_REASONS[pv];
+      const norm = pv.toLowerCase().replace(/\s/g, '');
+      for (const [key, val] of Object.entries(PENDING_REASONS)) {
+        if (key.toLowerCase().replace(/\s/g, '') === norm) return val;
+      }
+      return '';
+    }
+
+    (function loadReasons() {
+      try {
+        const saved = localStorage.getItem('medbill_pending_reasons');
+        if (saved) PENDING_REASONS = JSON.parse(saved);
+      } catch (e) { }
+      // Also try to fetch from server
+      fetch('/api/pending-reasons').then(r => r.ok ? r.json() : null).then(data => {
+        if (data && typeof data === 'object') {
+          PENDING_REASONS = Object.assign(PENDING_REASONS, data);
+          saveReasonsToStorage();
+        }
+      }).catch(() => { });
+    })();
+
+    function saveReasonsToStorage() {
+      try { localStorage.setItem('medbill_pending_reasons', JSON.stringify(PENDING_REASONS)); } catch (e) { }
+      fetch('/api/pending-reasons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(PENDING_REASONS)
+      }).catch(() => { });
+    }
+
+    let _reasonModalProv = null;
+
+    function openReasonModal(provName) {
+      _reasonModalProv = provName;
+      const isAll = provName === '__all__';
+      document.getElementById('reason-modal-prov-name').textContent = isAll ? 'all providers' : provName;
+      document.getElementById('reason-modal-input').value = isAll ? '' : (PENDING_REASONS[provName] || '');
+
+      if (isAll) {
+        // Build multi-provider textarea with all providers listed
+        const provs = [...new Set(RAW.billing.map(r => r.provider))].filter(Boolean).sort();
+        const lines = provs.map(p => `${p}: ${PENDING_REASONS[p] || ''}`).join('\n');
+        document.getElementById('reason-modal-input').value = lines;
+        document.querySelector('.reason-modal-sub').innerHTML =
+          'Edit reasons line by line as <b>Provider Name: Reason text</b>';
+      } else {
+        document.querySelector('.reason-modal-sub').innerHTML =
+          `Set the reason for pending claims for <span class="reason-modal-provider" id="reason-modal-prov-name">${provName}</span>`;
+      }
+      document.getElementById('reason-modal-overlay').classList.add('open');
+      setTimeout(() => document.getElementById('reason-modal-input').focus(), 80);
+    }
+
+    function closeReasonModal() {
+      document.getElementById('reason-modal-overlay').classList.remove('open');
+      _reasonModalProv = null;
+    }
+
+    function saveReason() {
+      const text = document.getElementById('reason-modal-input').value.trim();
+      if (_reasonModalProv === '__all__') {
+        // Parse "Provider: Reason" lines
+        const lines = text.split('\n');
+        lines.forEach(line => {
+          const idx = line.indexOf(':');
+          if (idx > 0) {
+            const prov = line.substring(0, idx).trim();
+            const reason = line.substring(idx + 1).trim();
+            if (prov) PENDING_REASONS[prov] = reason;
+          }
+        });
+      } else if (_reasonModalProv) {
+        PENDING_REASONS[_reasonModalProv] = text;
+      }
+      saveReasonsToStorage();
+      closeReasonModal();
+      renderBilling(); // re-render to show updated reasons
+    }
+
+    function renderBillingReasonBanner(selectedProv, allProviders) {
+      const bannerEl = document.getElementById('b-reason-banner');
+      const summaryEl = document.getElementById('b-reason-summary');
+      const isAll = !selectedProv || selectedProv === 'all';
+
+      if (isAll) {
+        // Show read-only summary for all providers (no edit buttons)
+        bannerEl.style.display = 'none';
+        const hasProviders = allProviders && allProviders.length > 0;
+        if (!hasProviders) { summaryEl.style.display = 'none'; return; }
+
+        // Only show if at least one provider has a reason set
+        const anyReason = allProviders.some(pv => getReason(pv));
+        if (!anyReason) { summaryEl.style.display = 'none'; return; }
+
+        summaryEl.style.display = 'block';
+
+        let rows = '';
+        for (const pv of allProviders.sort()) {
+          const r = getReason(pv);
+          if (!r) continue;
+          rows += `<tr>
+        <td class="lbl" style="font-weight:600;">${escHtml(pv)}</td>
+        <td class="reason-cell"><span class="reason-pill" title="${escHtml(r)}">${escHtml(r)}</span></td>
+      </tr>`;
+        }
+        document.getElementById('b-reason-tbl').innerHTML = rows || '<tr><td colspan="2" class="no-data">No reasons set</td></tr>';
+      } else {
+        // Show single provider banner (read-only, no edit button)
+        summaryEl.style.display = 'none';
+        const reason = getReason(selectedProv);
+        if (!reason) { bannerEl.style.display = 'none'; return; }
+        bannerEl.style.display = 'block';
+        bannerEl.innerHTML = `
+      <div class="pending-reason-banner">
+        <div class="reason-icon">⚠️</div>
+        <div class="reason-body">
+          <div class="reason-provider">Pending Reason — ${escHtml(selectedProv)}</div>
+          <div class="reason-text">${escHtml(reason)}</div>
+        </div>
+      </div>`;
+      }
+    }
+
+    function escHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // Close reason modal on overlay click
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('reason-modal-overlay').addEventListener('click', e => {
+        if (e.target === document.getElementById('reason-modal-overlay')) closeReasonModal();
+      });
+    });
+
+    /* ══════════════════════════════════════════════════════════════
+       NEUMORPHIC CUSTOM SELECT — replaces all native <select> tags
+    ══════════════════════════════════════════════════════════════ */
+    (function () {
+      const ARROW = `<svg class="nm-select-arrow" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+      function buildNmSelect(sel) {
+        if (sel.dataset.nmBuilt) return;
+        sel.dataset.nmBuilt = '1';
+
+        // Track the user's chosen value independently of the native select
+        // so innerHTML rewrites (fillProvSel etc.) don't lose the selection
+        let chosenValue = sel.value || 'all';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'nm-select';
+
+        const trigger = document.createElement('div');
+        trigger.className = 'nm-select-trigger';
+
+        const label = document.createElement('span');
+        label.className = 'nm-select-text';
+
+        // Append label first, then arrow via insertAdjacentHTML to avoid clobbering
+        trigger.appendChild(label);
+        trigger.insertAdjacentHTML('beforeend', ARROW);
+
+        const menu = document.createElement('div');
+        menu.className = 'nm-select-menu';
+
+        // Rebuild the custom option list and restore the chosen value
+        function rebuild() {
+          menu.innerHTML = '';
+
+          // Restore chosen value into native select so selectedIndex is correct
+          if (sel.querySelector(`option[value="${chosenValue}"]`)) {
+            sel.value = chosenValue;
+          } else {
+            // Chosen value no longer exists in new option set — fall back to first
+            chosenValue = sel.options[0]?.value || 'all';
+            sel.value = chosenValue;
+          }
+
+          const selectedIdx = sel.selectedIndex >= 0 ? sel.selectedIndex : 0;
+
+          Array.from(sel.options).forEach((opt, i) => {
+            const item = document.createElement('div');
+            item.className = 'nm-select-option' + (i === selectedIdx ? ' selected' : '');
+            item.textContent = opt.text;
+            item.dataset.value = opt.value;
+
+            item.addEventListener('mousedown', (e) => {
+              e.preventDefault();
+              chosenValue = opt.value;        // remember user's pick
+              sel.value = opt.value;          // sync native select
+              label.textContent = opt.text;   // update visible label immediately
+              menu.querySelectorAll('.nm-select-option').forEach(o => o.classList.remove('selected'));
+              item.classList.add('selected');
+              closeAll();
+              sel.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+
+            menu.appendChild(item);
+          });
+
+          // Update visible label to match the restored selection
+          label.textContent = sel.options[selectedIdx]?.text || '';
+        }
+
+        // MutationObserver fires when fillProvSel / fillMonthSel rewrites innerHTML
+        // We use setTimeout(0) so all new <option> nodes are in the DOM before we read them
+        const mo = new MutationObserver(() => setTimeout(rebuild, 0));
+        mo.observe(sel, { childList: true });
+
+        // Initial build
+        rebuild();
+
+        wrapper.appendChild(trigger);
+        wrapper.appendChild(menu);
+        sel.parentNode.insertBefore(wrapper, sel.nextSibling);
+
+        trigger.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isOpen = wrapper.classList.contains('open');
+          closeAll();
+          if (!isOpen) {
+            wrapper.classList.add('open');
+            const rect = wrapper.getBoundingClientRect();
+            const spaceBelow = window.innerHeight - rect.bottom;
+            menu.style.top = spaceBelow < 220 ? 'auto' : 'calc(100% + 6px)';
+            menu.style.bottom = spaceBelow < 220 ? 'calc(100% + 6px)' : 'auto';
+          }
+        });
+      }
+
+      function closeAll() {
+        document.querySelectorAll('.nm-select.open').forEach(d => d.classList.remove('open'));
+      }
+
+      document.addEventListener('click', closeAll);
+
+      function buildAll() {
+        document.querySelectorAll('select:not([data-nm-built])').forEach(buildNmSelect);
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', buildAll);
+      } else {
+        buildAll();
+      }
+
+      setTimeout(buildAll, 200);
+      setTimeout(buildAll, 600);
+      setTimeout(buildAll, 1200);
+    })();
+
+  </script>
+
+  <script>
+    function toggleSidebar() {
+      const sb = document.getElementById('sidebar');
+      sb.classList.toggle('open');
+      const btn = document.getElementById('sidebar-toggle');
+      const icon = btn.querySelector('i');
+      if (sb.classList.contains('open')) {
+        icon.setAttribute('data-lucide', 'x');
+      } else {
+        icon.setAttribute('data-lucide', 'menu');
+      }
+      lucide.createIcons();
+    }
+
+    function showToast(msg) {
+      const t = document.createElement('div');
+      t.className = 'toast';
+      t.innerHTML = `<i data-lucide="check-circle" style="width:16px;height:16px;color:var(--green)"></i> ${msg}`;
+      document.body.appendChild(t);
+      lucide.createIcons();
+      setTimeout(() => {
+        t.classList.add('hide');
+        setTimeout(() => t.remove(), 400);
+      }, 3000);
+    }
+  </script>
+</body>
+
+</html>
